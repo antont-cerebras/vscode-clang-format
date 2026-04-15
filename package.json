@@ -2,7 +2,7 @@
   "name": "clang-format-2025",
   "displayName": "Clang-Format 2025",
   "description": "Use Clang-Format in Visual Studio Code",
-  "version": "2.0.9",
+  "version": "2.0.10",
   "publisher": "ebextensions",
   "engines": {
     "vscode": "^1.99.0"
@@ -10,11 +10,6 @@
   "galleryBanner": {
     "color": "#005577",
     "theme": "dark"
-  },
-  "dependencies": {
-    "@types/which": "^3.0.4",
-    "sax": "^1.4.3",
-    "which": "^6.0.0"
   },
   "categories": [
     "Formatters"
@@ -472,7 +467,6 @@
     "@tsconfig/node20": "^20.1.8",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.19.27",
-    "@types/sax": "^1.2.7",
     "@types/vscode": "~1.99.1",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
