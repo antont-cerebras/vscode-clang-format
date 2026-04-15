@@ -18,6 +18,10 @@ interface EditInfo {
   text: string;
 }
 
+function timestamp(): string {
+  return new Date().toTimeString().slice(0, 8); // HH:MM:SS
+}
+
 // Cache binary paths for performance
 const binPathCache: Record<string, string | undefined> = {};
 export const outputChannel = vscode.window.createOutputChannel("Clang-Format");
@@ -267,11 +271,7 @@ export class ClangDocumentFormattingEditProvider
 
   private getLanguage(document: vscode.TextDocument): string {
     const langId = document.languageId;
-    const mappedLang = (ALIAS as Record<string, string>)[langId] || langId;
-    outputChannel.appendLine(
-      `Document language ID: ${langId}, mapped to: ${mappedLang}`,
-    );
-    return mappedLang;
+    return (ALIAS as Record<string, string>)[langId] || langId;
   }
 
   private getStyle(document: vscode.TextDocument) {
@@ -502,7 +502,6 @@ export class ClangDocumentFormattingEditProvider
       try {
         formatCommandBinPath = getBinPath(this.getExecutablePath(document));
         const codeContent = document.getText();
-
         const formatArgs = this.getFormatArgs(document, range);
         if (!formatArgs) {
           cleanup();
@@ -562,13 +561,20 @@ export class ClangDocumentFormattingEditProvider
           }
 
           if (!stdout) {
-            // No changes needed
+            outputChannel.appendLine(
+              `[${timestamp()}] Formatting ${document.fileName}: no changes`,
+            );
             resolve([]);
             return;
           }
 
           this.getEdits(document, stdout, codeContent)
-            .then(resolve)
+            .then((edits) => {
+              outputChannel.appendLine(
+                `[${timestamp()}] Formatting ${document.fileName}: success (${edits.length} edit(s))`,
+              );
+              resolve(edits);
+            })
             .catch((error: Error) => {
               outputChannel.appendLine(`Error getting edits: ${error.message}`);
               reject(error);
