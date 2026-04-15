@@ -443,6 +443,46 @@
           "default": "",
           "description": "When reading from stdin, clang-format assumes this filename to look for a style config file (with -style=file) and to determine the language.",
           "scope": "resource"
+        },
+        "clang-format.commands": {
+          "type": "array",
+          "default": [],
+          "description": "User-defined shell commands available via 'Clang-Format: Run Command...'. Each entry has a 'name' (shown in the picker) and a 'command' (shell command to run).",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "command"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Label shown in the command picker"
+              },
+              "command": {
+                "type": "string",
+                "description": "Shell command to run"
+              }
+            }
+          },
+          "scope": "resource"
+        },
+        "clang-format.formatProjectCommand": {
+          "type": "string",
+          "default": "",
+          "description": "Shell command to format the entire project (e.g. 'make clang-format'). Supports ${workspaceFolder}. When set, enables the 'Clang-Format: Format Project' command.",
+          "scope": "resource"
+        },
+        "clang-format.formatChangedCommand": {
+          "type": "string",
+          "default": "",
+          "description": "Shell command to format only changed files (e.g. 'make clang-format-changed'). Supports ${workspaceFolder}. When set, enables the 'Clang-Format: Format Changed Files' command.",
+          "scope": "resource"
+        },
+        "clang-format.verboseLog": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable verbose logging in the Output panel."
         }
       }
     }

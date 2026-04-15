@@ -103,6 +103,10 @@ function main() {
       packageJson.contributes.configuration.properties[
         "clang-format.assumeFilename"
       ],
+    "clang-format.verboseLog":
+      packageJson.contributes.configuration.properties[
+        "clang-format.verboseLog"
+      ],
   };
 
   // Write back to package.json with consistent formatting

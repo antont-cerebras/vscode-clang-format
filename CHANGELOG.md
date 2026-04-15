@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 ### Added
 - `${toolchainPointerFile}` placeholder for `clang-format.executable`: reads the file set in `clang-format.toolchainPointerFile` and substitutes its content into the executable path
 - Log clang-format version (or "not found" with searched paths) in the Output panel on extension startup
+- `clang-format.verboseLog` setting: when enabled, logs each edit as a colored diff (red/green) in the Output panel
 
 ## [2.0.10] - 2026-04-15
 ### Changed

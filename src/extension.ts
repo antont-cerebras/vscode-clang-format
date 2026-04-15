@@ -24,7 +24,10 @@ function timestamp(): string {
 
 // Cache binary paths for performance
 const binPathCache: Record<string, string | undefined> = {};
-export const outputChannel = vscode.window.createOutputChannel("Clang-Format");
+export const outputChannel = vscode.window.createOutputChannel(
+  "Clang-Format",
+  "diff",
+);
 let diagnosticCollection: vscode.DiagnosticCollection;
 
 function getPlatformString() {
@@ -615,6 +618,52 @@ export class ClangDocumentFormattingEditProvider
               outputChannel.appendLine(
                 `[${timestamp()}] Formatting ${document.fileName}: success (${edits.length} edit(s))`,
               );
+              const verbose = vscode.workspace
+                .getConfiguration("clang-format", document.uri)
+                .get<boolean>("verboseLog", false);
+              if (verbose) {
+                const MAX_DIFF_LINES = 20;
+                edits.forEach((edit, i) => {
+                  const { start, end } = edit.range;
+                  const loc = `${start.line + 1}:${start.character + 1}–${end.line + 1}:${end.character + 1}`;
+
+                  // Collect old lines (full lines spanning the replaced range)
+                  const oldLines: string[] = [];
+                  for (let ln = start.line; ln <= end.line; ln++) {
+                    oldLines.push(document.lineAt(ln).text);
+                  }
+
+                  // Reconstruct new lines by splicing newText into the line context
+                  const prefix = document.lineAt(start.line).text.slice(
+                    0,
+                    start.character,
+                  );
+                  const suffix = document.lineAt(end.line).text.slice(
+                    end.character,
+                  );
+                  const newLines = (prefix + edit.newText + suffix).split("\n");
+
+                  const total = oldLines.length + newLines.length;
+                  const truncated = total > MAX_DIFF_LINES;
+                  const half = Math.floor(MAX_DIFF_LINES / 2);
+                  const oldSlice = truncated ? oldLines.slice(0, half) : oldLines;
+                  const newSlice = truncated ? newLines.slice(0, half) : newLines;
+
+                  const diffLines = [
+                    ...oldSlice.map((l) => `- ${l}`),
+                    ...newSlice.map((l) => `+ ${l}`),
+                  ];
+                  if (truncated) {
+                    diffLines.push(
+                      `  … (${oldLines.length} → ${newLines.length} lines)`,
+                    );
+                  }
+
+                  outputChannel.appendLine(
+                    `  edit ${i + 1} (${loc}):\n${diffLines.join("\n")}`,
+                  );
+                });
+              }
               resolve(edits);
             })
             .catch((error: Error) => {
