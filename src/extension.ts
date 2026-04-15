@@ -3,8 +3,6 @@ import * as cp from "child_process";
 import * as path from "path";
 import { MODES } from "./clangMode";
 import { ALIAS } from "./shared/languageConfig";
-import * as sax from "sax";
-import { sync as whichSync } from "which";
 import { statSync } from "fs";
 
 interface ClangFormatConfig {
@@ -36,6 +34,31 @@ function getPlatformString() {
   }
 
   return "unknown";
+}
+
+function whichSync(name: string): string {
+  const pathDirs = (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean);
+  const extensions =
+    process.platform === "win32"
+      ? (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD")
+          .split(";")
+          .filter(Boolean)
+      : [""];
+  for (const dir of pathDirs) {
+    for (const ext of extensions) {
+      const candidate = path.join(dir, name + ext);
+      try {
+        if (statSync(candidate).isFile()) {
+          return candidate;
+        }
+      } catch {
+        // not in this dir
+      }
+    }
+  }
+  throw new Error(`not found: ${name}`);
 }
 
 /**
@@ -138,41 +161,19 @@ export class ClangDocumentFormattingEditProvider
     codeContent: string,
   ): Promise<vscode.TextEdit[]> {
     return new Promise<vscode.TextEdit[]>((resolve, reject) => {
-      // Use strict XML parsing
-      const options = {
-        trim: false,
-        normalize: false,
-        strict: true,
-        lowercase: true,
-      };
-
-      const parser = sax.parser(true, options);
-      const edits: vscode.TextEdit[] = [];
-      let currentEdit: EditInfo | undefined;
-
-      // Create a reusable buffer for UTF-8 calculations
       const textEncoder = new TextEncoder();
-      const getUtf8Length = (
-        str: string,
-        start: number,
-        len: number,
-      ): number => {
-        return textEncoder.encode(str.substring(start, start + len)).length;
-      };
+      const getUtf8Length = (str: string, start: number, len: number): number =>
+        textEncoder.encode(str.substring(start, start + len)).length;
 
       const byteToOffset = (editInfo: EditInfo): EditInfo => {
         const content = codeContent;
         let bytePos = 0;
         let charPos = 0;
-
-        // Find the character position that corresponds to the byte offset
         while (bytePos < editInfo.offset && charPos < content.length) {
           bytePos += getUtf8Length(content, charPos, 1);
           charPos++;
         }
         editInfo.offset = charPos;
-
-        // Calculate the length in characters
         const byteEnd = bytePos + editInfo.length;
         let charEnd = charPos;
         while (bytePos < byteEnd && charEnd < content.length) {
@@ -180,103 +181,56 @@ export class ClangDocumentFormattingEditProvider
           charEnd++;
         }
         editInfo.length = charEnd - charPos;
-
         return editInfo;
       };
 
-      const handleError = (error: Error): void => {
-        outputChannel.appendLine(`XML parsing error: ${error.message}`);
-        reject(error);
-      };
-
-      parser.onerror = handleError;
-
-      parser.onopentag = (tag) => {
-        if (currentEdit) {
-          handleError(new Error("Malformed XML: nested replacement tags"));
-          return;
-        }
-
-        switch (tag.name.toLowerCase()) {
-          case "replacements":
-            return;
-
-          case "replacement": {
-            const length = tag.attributes.length;
-            const offset = tag.attributes.offset;
-
-            if (typeof length !== "string" || typeof offset !== "string") {
-              handleError(
-                new Error("Malformed XML: missing required attributes"),
-              );
-              return;
-            }
-
-            currentEdit = {
-              length: parseInt(length),
-              offset: parseInt(offset),
-              text: "",
-            };
-            byteToOffset(currentEdit);
-            break;
+      // Single-pass XML entity decoder (avoids double-decoding &amp;lt; etc.)
+      // Also handles numeric character references (e.g. &#10; for newline).
+      const decodeEntities = (s: string): string =>
+        s.replace(/&(?:amp|lt|gt|apos|quot|#x[\da-fA-F]+|#\d+);/g, (m) => {
+          switch (m) {
+            case "&amp;":
+              return "&";
+            case "&lt;":
+              return "<";
+            case "&gt;":
+              return ">";
+            case "&apos;":
+              return "'";
+            case "&quot;":
+              return '"';
+            default:
+              if (m.startsWith("&#x")) {
+                return String.fromCodePoint(parseInt(m.slice(3, -1), 16));
+              }
+              return String.fromCodePoint(parseInt(m.slice(2, -1), 10));
           }
-
-          default:
-            handleError(new Error(`Unexpected XML tag: ${tag.name}`));
-        }
-      };
-
-      parser.ontext = (text) => {
-        if (!currentEdit) {
-          return;
-        }
-        currentEdit.text = text;
-      };
-
-      parser.onclosetag = (_) => {
-        if (!currentEdit) {
-          return;
-        }
-
-        try {
-          const start = document.positionAt(currentEdit.offset);
-          const end = document.positionAt(
-            currentEdit.offset + currentEdit.length,
-          );
-          const editRange = new vscode.Range(start, end);
-          edits.push(new vscode.TextEdit(editRange, currentEdit.text));
-        } catch (error: unknown) {
-          const errorMessage =
-            error instanceof Error ? error.message : "unknown error";
-          handleError(new Error(`Failed to create edit: ${errorMessage}`));
-          return;
-        }
-
-        currentEdit = undefined;
-      };
-
-      parser.onend = () => {
-        if (currentEdit) {
-          handleError(new Error("Malformed XML: unclosed replacement tag"));
-          return;
-        }
-        resolve(edits);
-      };
-
-      // Process content in chunks to avoid memory issues
-      const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+        });
 
       try {
-        // Split XML into chunks and process
-        for (let i = 0; i < xml.length; i += CHUNK_SIZE) {
-          const chunk = xml.slice(i, i + CHUNK_SIZE);
-          parser.write(chunk);
+        const edits: vscode.TextEdit[] = [];
+        // clang-format output format: <replacement offset='N' length='N'>text</replacement>
+        const pattern =
+          /<replacement\s+offset=['"](\d+)['"]\s+length=['"](\d+)['"]>([\s\S]*?)<\/replacement>/g;
+        let match: RegExpExecArray | null;
+        while ((match = pattern.exec(xml)) !== null) {
+          const editInfo = byteToOffset({
+            offset: parseInt(match[1], 10),
+            length: parseInt(match[2], 10),
+            text: decodeEntities(match[3]),
+          });
+          const start = document.positionAt(editInfo.offset);
+          const end = document.positionAt(editInfo.offset + editInfo.length);
+          edits.push(
+            new vscode.TextEdit(new vscode.Range(start, end), editInfo.text),
+          );
         }
-        parser.end();
+        resolve(edits);
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : "unknown error";
-        handleError(new Error(`XML processing error: ${errorMessage}`));
+        outputChannel.appendLine(`XML parsing error: ${errorMessage}`);
+        reject(error instanceof Error ? error : new Error(errorMessage));
       }
     });
   }
