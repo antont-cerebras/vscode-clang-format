@@ -1,9 +1,18 @@
+# Build output
 out
 dist
 node_modules
 .vscode-test/
 *.vsix
 actionlint
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
 .pnp.*
 .yarn/*
 !.yarn/patches
