@@ -3,7 +3,7 @@ import * as cp from "child_process";
 import * as path from "path";
 import { MODES } from "./clangMode";
 import { ALIAS } from "./shared/languageConfig";
-import { statSync } from "fs";
+import { statSync, readFileSync } from "fs";
 
 interface ClangFormatConfig {
   executable: string;
@@ -78,10 +78,24 @@ function getBinPath(binname: string): string {
       if (statSync(binPathCache[binname]).isFile()) {
         return binPathCache[binname];
       }
-    } catch (_) {
+    } catch {
       // Cache is invalid, remove it
       binPathCache[binname] = undefined;
     }
+  }
+
+  // If an absolute path is given, verify it directly without PATH search
+  if (path.isAbsolute(binname)) {
+    try {
+      if (statSync(binname).isFile()) {
+        binPathCache[binname] = binname;
+        return binname;
+      }
+    } catch {
+      // fall through to throw below
+    }
+    outputChannel.appendLine(`Could not find binary '${binname}'`);
+    throw new Error(`clang-format binary not found: "${binname}"`);
   }
 
   try {
@@ -238,7 +252,7 @@ export class ClangDocumentFormattingEditProvider
 
   /// Get execute name in clang-format.executable, if not found, use default value
   /// If configure has changed, it will get the new value
-  private getExecutablePath(document?: vscode.TextDocument) {
+  public getExecutablePath(document?: vscode.TextDocument) {
     const platform = getPlatformString();
     const config = vscode.workspace.getConfiguration(
       "clang-format",
@@ -253,10 +267,38 @@ export class ClangDocumentFormattingEditProvider
       return this.defaultConfigure.executable;
     }
 
+    const workspaceFolder = this.getWorkspaceFolder(document) ?? "";
+
+    // Resolve ${toolchainPointerFile} if used
+    let toolchainPrefix = "";
+    if (execPath.includes("${toolchainPointerFile}")) {
+      const pointerFile = config
+        .get<string>("toolchainPointerFile", "")
+        ?.replace(/\${workspaceRoot}/g, workspaceFolder)
+        .replace(/\${workspaceFolder}/g, workspaceFolder)
+        .trim();
+
+      if (!pointerFile) {
+        const msg =
+          "${toolchainPointerFile} is used in clang-format.executable but clang-format.toolchainPointerFile is not set.";
+        outputChannel.appendLine(`Error: ${msg}`);
+        vscode.window.showErrorMessage(msg);
+      } else {
+        try {
+          toolchainPrefix = readFileSync(pointerFile, "utf8").trim();
+        } catch (err) {
+          const msg = `Cannot read toolchain pointer file "${pointerFile}": ${err instanceof Error ? err.message : String(err)}`;
+          outputChannel.appendLine(`Error: ${msg}`);
+          vscode.window.showErrorMessage(msg);
+        }
+      }
+    }
+
     // replace placeholders, if present
     return execPath
-      .replace(/\${workspaceRoot}/g, this.getWorkspaceFolder(document) ?? "")
-      .replace(/\${workspaceFolder}/g, this.getWorkspaceFolder(document) ?? "")
+      .replace(/\${toolchainPointerFile}/g, toolchainPrefix)
+      .replace(/\${workspaceRoot}/g, workspaceFolder)
+      .replace(/\${workspaceFolder}/g, workspaceFolder)
       .replace(/\${cwd}/g, process.cwd())
       .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => {
         if (!/^[a-z_]\w*$/i.test(envName)) {
@@ -638,6 +680,23 @@ export function activate(ctx: vscode.ExtensionContext): void {
   ctx.subscriptions.push(outputChannel);
 
   const formatter = new ClangDocumentFormattingEditProvider();
+
+  // Log clang-format version on startup
+  try {
+    const binPath = getBinPath(formatter.getExecutablePath());
+    const result = cp.spawnSync(binPath, ["--version"], { encoding: "utf8" });
+    if (result.stdout) {
+      outputChannel.appendLine(`[${timestamp()}] ${result.stdout.trim()}`);
+    }
+  } catch {
+    const searchPath = (process.env.PATH ?? "")
+      .split(path.delimiter)
+      .join(", ");
+    outputChannel.appendLine(
+      `[${timestamp()}] clang-format not found (searched: ${searchPath})`,
+    );
+  }
+
   const availableLanguages = new Set<string>();
 
   for (const mode of MODES) {

@@ -3,10 +3,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.1.0] - 2026-04-15
+### Added
+- `${toolchainPointerFile}` placeholder for `clang-format.executable`: reads the file set in `clang-format.toolchainPointerFile` and substitutes its content into the executable path
+- Log clang-format version (or "not found" with searched paths) in the Output panel on extension startup
+
 ## [2.0.10] - 2026-04-15
 ### Changed
 - Remove all external NPM runtime dependencies (`sax`, `which`) and replace with Node.js built-in equivalents, eliminating supply-chain attack surface
 - Transfer to Cerebras; update publisher and repository URL
+### Fixed
+- Show a visible VS Code error notification when the clang-format binary is not found, instead of logging silently to the Output panel
 
 ## [2.0.9] - 2025-12-29
 ### Fixed

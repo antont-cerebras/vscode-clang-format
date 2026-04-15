@@ -2,7 +2,7 @@
   "name": "clang-format",
   "displayName": "Clang-Format",
   "description": "clang-format support for Visual Studio Code",
-  "version": "2.0.10",
+  "version": "2.1.0",
   "publisher": "Cerebras",
   "engines": {
     "vscode": "^1.99.0"
@@ -56,10 +56,16 @@
       "type": "object",
       "title": "Clang-Format configuration",
       "properties": {
+        "clang-format.toolchainPointerFile": {
+          "type": "string",
+          "default": "",
+          "description": "Path to a file whose content is substituted as the ${toolchainPointerFile} placeholder in clang-format.executable.",
+          "scope": "resource"
+        },
         "clang-format.executable": {
           "type": "string",
           "default": "clang-format",
-          "description": "clang-format executable path",
+          "description": "clang-format executable path. Supports ${workspaceFolder}, ${env.NAME}, and ${toolchainPointerFile}.",
           "scope": "resource"
         },
         "clang-format.executable.windows": {

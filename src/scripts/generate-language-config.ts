@@ -72,6 +72,10 @@ function main() {
 
   // Merge with existing configuration properties
   packageJson.contributes.configuration.properties = {
+    "clang-format.toolchainPointerFile":
+      packageJson.contributes.configuration.properties[
+        "clang-format.toolchainPointerFile"
+      ],
     "clang-format.executable":
       packageJson.contributes.configuration.properties[
         "clang-format.executable"
