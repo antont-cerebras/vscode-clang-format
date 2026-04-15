@@ -755,6 +755,21 @@ export function activate(ctx: vscode.ExtensionContext): void {
   ctx.subscriptions.push(diagnosticCollection);
   ctx.subscriptions.push(outputChannel);
 
+  // Associate .clang-format files with YAML language
+  const setClangFormatLanguage = (doc: vscode.TextDocument) => {
+    const basename = path.basename(doc.fileName);
+    if (
+      (basename === ".clang-format" || basename === "_clang-format") &&
+      doc.languageId !== "yaml"
+    ) {
+      vscode.languages.setTextDocumentLanguage(doc, "yaml");
+    }
+  };
+  vscode.workspace.textDocuments.forEach(setClangFormatLanguage);
+  ctx.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument(setClangFormatLanguage),
+  );
+
   const formatter = new ClangDocumentFormattingEditProvider();
 
   // Log clang-format version on startup

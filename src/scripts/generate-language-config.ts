@@ -49,7 +49,10 @@ function generateLanguageConfig(
 }
 
 function generateActivationEvents(): string[] {
-  return SUPPORTED_LANGUAGES.map((lang) => `onLanguage:${lang}`);
+  return [
+    ...SUPPORTED_LANGUAGES.map((lang) => `onLanguage:${lang}`),
+    "onStartupFinished",
+  ];
 }
 
 function main() {

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - `clang-format.verboseLog` setting: when enabled, logs each edit as a colored diff (red/green) in the Output panel
 - Log which `.clang-format` config file is used on each format operation, or explicitly note when none is found
 - Command **Clang-Format: Open .clang-format for Current File** to jump to the config file that applies to the active editor
+- `.clang-format` and `_clang-format` files are now associated with the YAML language for proper syntax highlighting
 
 ## [2.0.10] - 2026-04-15
 ### Changed

@@ -48,10 +48,20 @@
     "onLanguage:tablegen",
     "onLanguage:metal",
     "onLanguage:verilog",
-    "onLanguage:systemverilog"
+    "onLanguage:systemverilog",
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "languages": [
+      {
+        "id": "yaml",
+        "filenames": [
+          ".clang-format",
+          "_clang-format"
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "clang-format.openConfig",
