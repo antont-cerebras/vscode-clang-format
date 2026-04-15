@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.0.10] - 2026-04-15
+### Changed
+- Remove all external NPM runtime dependencies (`sax`, `which`) and replace with Node.js built-in equivalents, eliminating supply-chain attack surface
+- Transfer to Cerebras; update publisher and repository URL
+
 ## [2.0.9] - 2025-12-29
 ### Fixed
 - Refresh depends and devdepends
