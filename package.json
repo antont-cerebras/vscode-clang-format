@@ -52,6 +52,13 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "clang-format.openConfig",
+        "title": "Open .clang-format for Current File",
+        "category": "Clang-Format"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Clang-Format configuration",

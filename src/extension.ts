@@ -775,6 +775,30 @@ export function activate(ctx: vscode.ExtensionContext): void {
 
   const availableLanguages = new Set<string>();
 
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand(
+      "clang-format.openConfig",
+      async () => {
+        const doc = vscode.window.activeTextEditor?.document;
+        if (!doc) {
+          vscode.window.showInformationMessage("No active editor.");
+          return;
+        }
+        const startDir = path.dirname(doc.fileName);
+        const configPath = findClangFormatConfig(startDir);
+        if (!configPath) {
+          vscode.window.showInformationMessage(
+            `No .clang-format file found (searched from: ${startDir})`,
+          );
+          return;
+        }
+        const configDoc =
+          await vscode.workspace.openTextDocument(configPath);
+        await vscode.window.showTextDocument(configDoc);
+      },
+    ),
+  );
+
   for (const mode of MODES) {
     if (typeof mode.language === "string") {
       ctx.subscriptions.push(

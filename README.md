@@ -78,6 +78,12 @@ Set `clang-format.toolchainPointerFile` to the path of the tag file and use `${t
 
 The extension reads the tag file at format time, trims whitespace, and substitutes its contents into the executable path. If the file cannot be read, a visible error is shown in VS Code.
 
+## Commands
+
+### Open .clang-format for Current File
+
+Run **Clang-Format: Open .clang-format for Current File** from the command palette to open the `.clang-format` config that applies to the file in the active editor. The extension searches upward from the file's directory, matching the same lookup order clang-format uses. If no config file is found, a notification is shown.
+
 ## Verbose logging
 
 Set `clang-format.verboseLog` to `true` to log each individual edit as a colored diff in the **Clang-Format** Output panel:
