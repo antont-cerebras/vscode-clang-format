@@ -111,14 +111,11 @@ function getBinPath(binname: string): string {
     // If we get here, something went wrong with the path
     throw new Error(`Invalid binary path returned by which: ${binPath}`);
   } catch (error) {
-    // If which fails, return the binary name as-is
-    // This maintains compatibility with the old behavior
     const errorMessage = error instanceof Error ? error.message : String(error);
     outputChannel.appendLine(
       `Could not find binary '${binname}' in PATH: ${errorMessage}`,
     );
-    binPathCache[binname] = binname;
-    return binname;
+    throw new Error(`clang-format binary not found: "${binname}"`);
   }
 }
 
@@ -597,6 +594,17 @@ export class ClangDocumentFormattingEditProvider
         const errorMessage =
           err instanceof Error ? err.message : "unknown error";
         outputChannel.appendLine(`Error during formatting: ${errorMessage}`);
+        if (
+          err instanceof Error &&
+          err.message.startsWith("clang-format binary not found:")
+        ) {
+          const execPath = this.getExecutablePath(document);
+          const isDefault = execPath === "clang-format";
+          const notice = isDefault
+            ? `clang-format not found in PATH. Install clang-format or configure the "clang-format.executable" setting.`
+            : `clang-format executable not found: "${execPath}". Check the "clang-format.executable" setting.`;
+          vscode.window.showErrorMessage(notice);
+        }
         reject(
           new Error(`Error during formatting: ${errorMessage}`, { cause: err }),
         );

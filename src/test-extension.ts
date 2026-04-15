@@ -160,15 +160,21 @@ function testGetBinPathBasic() {
     ? 1
     : 0;
 
-  // Test fallback behavior
+  // Test that a missing binary throws an error
   total++;
-  passed +=
-    test("getBinPath should fallback to binary name if not found", () => {
-      const result = getBinPath("nonexistent");
-      return expect(result).toBe("nonexistent");
-    })
-      ? 1
-      : 0;
+  passed += test("getBinPath should throw when binary is not found", () => {
+    try {
+      getBinPath("nonexistent");
+      return false; // should not reach here
+    } catch (error) {
+      return (
+        error instanceof Error &&
+        error.message.includes("clang-format binary not found")
+      );
+    }
+  })
+    ? 1
+    : 0;
 
   console.log(`Basic tests: ${passed}/${total} passed\n`);
   return passed === total;
@@ -564,7 +570,7 @@ function getBinPath(binname: string): string {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.log(`Could not find binary '${binname}' in PATH: ${errorMessage}`);
-    return binname;
+    throw new Error(`clang-format binary not found: "${binname}"`);
   }
 }
 
