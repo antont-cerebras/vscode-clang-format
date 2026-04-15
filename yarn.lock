@@ -1734,9 +1734,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"clang-format-2025@workspace:.":
+"clang-format@workspace:.":
   version: 0.0.0-use.local
-  resolution: "clang-format-2025@workspace:."
+  resolution: "clang-format@workspace:."
   dependencies:
     "@eslint/js": "npm:^9.39.2"
     "@tsconfig/node20": "npm:^20.1.8"

@@ -1,9 +1,9 @@
 {
-  "name": "clang-format-2025",
-  "displayName": "Clang-Format 2025",
-  "description": "Use Clang-Format in Visual Studio Code",
+  "name": "clang-format",
+  "displayName": "Clang-Format",
+  "description": "clang-format support for Visual Studio Code",
   "version": "2.0.10",
-  "publisher": "ebextensions",
+  "publisher": "Cerebras",
   "engines": {
     "vscode": "^1.99.0"
   },
@@ -483,7 +483,7 @@
   "icon": "clang-format.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/a5ehren/vscode-clang-format"
+    "url": "https://github.com/antont-cerebras/vscode-clang-format"
   },
   "license": "MIT",
   "packageManager": "yarn@^4.12.0",
