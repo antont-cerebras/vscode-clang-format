@@ -22,6 +22,27 @@ function timestamp(): string {
   return new Date().toTimeString().slice(0, 8); // HH:MM:SS
 }
 
+function findClangFormatConfig(startDir: string): string | null {
+  let dir = startDir;
+  while (true) {
+    for (const name of [".clang-format", "_clang-format"]) {
+      try {
+        const candidate = path.join(dir, name);
+        if (statSync(candidate).isFile()) {
+          return candidate;
+        }
+      } catch {
+        // file not found in this directory, continue walking up
+      }
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      return null;
+    }
+    dir = parent;
+  }
+}
+
 // Cache binary paths for performance
 const binPathCache: Record<string, string | undefined> = {};
 export const outputChannel = vscode.window.createOutputChannel(
@@ -605,9 +626,15 @@ export class ClangDocumentFormattingEditProvider
             return;
           }
 
+          const docDir = path.dirname(document.fileName);
+          const configFile = findClangFormatConfig(docDir);
+          const configSuffix = configFile
+            ? ` [${configFile}]`
+            : " [no .clang-format found, using fallback style]";
+
           if (!stdout) {
             outputChannel.appendLine(
-              `[${timestamp()}] Formatting ${document.fileName}: no changes`,
+              `[${timestamp()}] Formatting ${document.fileName}: no changes${configSuffix}`,
             );
             resolve([]);
             return;
@@ -616,7 +643,7 @@ export class ClangDocumentFormattingEditProvider
           this.getEdits(document, stdout, codeContent)
             .then((edits) => {
               outputChannel.appendLine(
-                `[${timestamp()}] Formatting ${document.fileName}: success (${edits.length} edit(s))`,
+                `[${timestamp()}] Formatting ${document.fileName}: success (${edits.length} edit(s))${configSuffix}`,
               );
               const verbose = vscode.workspace
                 .getConfiguration("clang-format", document.uri)
