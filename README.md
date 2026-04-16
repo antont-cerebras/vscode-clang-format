@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/antont-cerebras/vscode-clang-format/blob/master/LICENSE)
 
-[`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) is a CLI tool to format source code files for C, C++, JavaScript, and many other languages. This extension aims to provide a VS Code-based UI to access to `clang-format`'s functionality.
+[`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) is a CLI tool to format source code files for C, C++, JavaScript, and many other languages. This extension aims to provide a VS Code-based UI to access to `clang-format`'s functionality. Install it from [GitHub Releases](#installing-or-updating-the-extension-from-github).
 
 ## Prerequisites
 
@@ -169,6 +169,139 @@ LLVM includes the `clang-format` binary. With the default install path, set:
 ```json
 {
     "clang-format.executable": "C:\\Program Files\\LLVM\\bin\\clang-format.exe"
+}
+```
+
+## Installing or Updating the Extension from GitHub
+
+The extension is published as a `.vsix` file on [GitHub Releases](https://github.com/antont-cerebras/vscode-clang-format/releases). You can download it manually (or with `wget`/`curl`) and install via **Extensions: Install from VSIX...** in the Command Palette.
+
+Alternatively, the shell function below automates downloading and installing it. Add it to your `.bashrc` or `.zshrc`:
+
+```bash
+# Download and install the clang-format VS Code extension.
+# Usage: clang-format-ext-update [--no-remove-stale-versions] [vX.Y.Z | X.Y.Z | <url-to-.vsix>]
+#   No argument: fetches the latest release from GitHub.
+# Since .vscode is symlinked across all worktrees, one install updates everywhere.
+# Requires: code (available in VS Code integrated terminal), curl, jq
+clang-format-ext-update() {
+  local repo="antont-cerebras/vscode-clang-format"
+  local remove_stale=1 force_reinstall=0 arg=""
+  for a in "$@"; do
+    case "$a" in
+      --no-remove-stale-versions) remove_stale=0 ;;
+      --force-reinstall) force_reinstall=1 ;;
+      --help)
+        echo "Usage: clang-format-ext-update [OPTIONS] [vX.Y.Z | X.Y.Z | <url-to-.vsix>]"
+        echo ""
+        echo "Install the Cerebras clang-format VS Code extension from GitHub releases."
+        echo "With no version argument, installs the latest release."
+        echo "After a successful install, removes any other installed clang-format versions."
+        echo ""
+        echo "Options:"
+        echo "  --force-reinstall           Skip confirmation prompts"
+        echo "  --no-remove-stale-versions  Keep older installed versions after install"
+        echo "  --help                      Show this help"
+        return 0 ;;
+      *) arg="$a" ;;
+    esac
+  done
+  local info vsix_url vsix_name tag
+
+  # Prerequisite checks
+  local missing=()
+  for cmd in curl jq; do
+    command -v "$cmd" &>/dev/null || missing+=("$cmd")
+  done
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "error: missing required tools: ${missing[*]}" >&2; return 1
+  fi
+  if ! command -v code &>/dev/null; then
+    echo "error: 'code' not found — run this from the VS Code integrated terminal" >&2; return 1
+  fi
+  # Refresh the IPC socket path — existing tmux panes keep the stale path from the
+  # previous VS Code session; point to the most recently created live socket instead.
+  local fresh_sock
+  fresh_sock=$(ls -t /run/user/$UID/vscode-ipc-*.sock 2>/dev/null | head -1)
+  [[ -n "$fresh_sock" ]] && export VSCODE_IPC_HOOK_CLI="$fresh_sock"
+  if [[ "$TERM_PROGRAM" != "vscode" ]]; then
+    echo -e "\e[33mwarning: not running inside VS Code terminal — 'code --install-extension' may fail\e[0m"
+  elif [[ -z "$fresh_sock" ]]; then
+    echo "error: no VS Code IPC socket found — is VS Code connected to this host?" >&2; return 1
+  fi
+
+  if [[ "$arg" == https://* || "$arg" == http://* ]]; then
+    vsix_url="$arg"
+    vsix_name="${vsix_url##*/}"
+    tag="(from URL)"
+  else
+    local api
+    if [[ -n "$arg" ]]; then
+      api="https://api.github.com/repos/$repo/releases/tags/v${arg#v}"
+    else
+      api="https://api.github.com/repos/$repo/releases/latest"
+    fi
+    echo "Fetching release info..."
+    info=$(curl -fsSL "$api") || { echo "error: failed to fetch release info" >&2; return 1; }
+    if printf '%s' "$info" | jq -e '.message' &>/dev/null; then
+      echo "error: $(printf '%s' "$info" | jq -r '.message')" >&2; return 1
+    fi
+    vsix_url=$(printf '%s' "$info" | jq -r '.assets[] | select(.name | endswith(".vsix")) | .browser_download_url')
+    vsix_name=$(printf '%s' "$info" | jq -r '.assets[] | select(.name | endswith(".vsix")) | .name')
+    tag=$(printf '%s' "$info" | jq -r '.tag_name')
+    if [[ -z "$vsix_url" ]]; then
+      echo "error: no .vsix asset found in release ($tag)" >&2; return 1
+    fi
+  fi
+
+  echo "Release: $tag ($vsix_name)"
+  local new_ver="${tag#v}"
+  # For URL installs, try to extract the version from the filename (e.g. clang-format-2.0.10.vsix)
+  [[ "$tag" == "(from URL)" ]] && new_ver=$(grep -oP '\d+\.\d+\.\d+' <<< "$vsix_name" | head -1)
+  if [[ -n "$new_ver" ]]; then
+    local cur_ver
+    cur_ver=$(ls -d ~/.vscode-server/extensions/*clang*format*-* 2>/dev/null \
+      | grep -oP '\d+\.\d+\.\d+$' | sort -V | tail -1)
+    if [[ -n "$cur_ver" ]]; then
+      local reply prompt
+      if [[ "$cur_ver" == "$new_ver" ]]; then
+        prompt="Version $new_ver is already installed. Overwrite? [y/N] "
+      elif [[ "$(printf '%s\n' "$cur_ver" "$new_ver" | sort -V | tail -1)" == "$cur_ver" ]]; then
+        prompt="Downgrade from $cur_ver to $new_ver? [y/N] "
+      fi
+      if [[ -n "$prompt" ]]; then
+        if [[ $force_reinstall -eq 1 ]]; then
+          echo "$prompt(--force-reinstall) y"
+        else
+          read -r -p "$prompt" reply
+          [[ "${reply,,}" == "y" ]] || { echo "Skipping."; return 0; }
+        fi
+      fi
+    fi
+  fi
+
+  local tmpdir tmp
+  tmpdir=$(mktemp -d) || return 1
+  tmp="$tmpdir/$vsix_name"
+  echo "Downloading..."
+  curl -fsSL -o "$tmp" "$vsix_url" || { rm -rf "$tmpdir"; return 1; }
+  echo "Installing..."
+  code --install-extension "$tmp" --force
+  local rc=$?
+  rm -rf "$tmpdir"
+  if [[ $rc -eq 0 ]]; then
+    if [[ $remove_stale -eq 1 ]]; then
+      local stale
+      while IFS= read -r stale; do
+        [[ "$stale" == *"-$new_ver" ]] && continue
+        rm -rf "$stale" && echo "Removed stale: ${stale##*/}"
+      done < <(ls -d ~/.vscode-server/extensions/*clang*format*-* 2>/dev/null)
+    fi
+    # VS Code does not expose a CLI command to trigger reload programmatically.
+    echo -e "\e[33m⚠  Reload the VS Code window to activate the new version.\e[0m"
+    echo -e "   Command Palette (Ctrl/Cmd+Shift+P) → Developer: Reload Window"
+  fi
+  return $rc
 }
 ```
 
