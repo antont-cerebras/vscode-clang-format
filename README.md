@@ -100,6 +100,10 @@ Run **Clang-Format: Open .clang-format for Current File** from the command palet
 
 `.clang-format` and `_clang-format` files are automatically associated with the YAML language, so they open with proper syntax highlighting.
 
+### Create .clang-format File
+
+Run **Clang-Format: Create .clang-format File...** to generate a new `.clang-format` config. A style picker lets you choose from LLVM, Google, Chromium, Mozilla, WebKit, Microsoft, GNU, or InheritParentConfig. The command runs `clang-format -style=<style> -dump-config` and shows a save dialog with `.clang-format` pre-filled in the current file's directory.
+
 ### Format Project / Format Changed Files / Run Command...
 
 Set `clang-format.formatProjectCommand` and/or `clang-format.formatChangedCommand` to enable the dedicated **Clang-Format: Format Project** and **Clang-Format: Format Changed Files** commands:

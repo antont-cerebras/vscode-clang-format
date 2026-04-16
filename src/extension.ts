@@ -474,6 +474,7 @@ export class ClangDocumentFormattingEditProvider
       "webkit",
       "microsoft",
       "gnu",
+      "inheritparentconfig",
       "file",
     ];
     const normalizedStyle = style.toLowerCase();
@@ -940,6 +941,69 @@ export function activate(ctx: vscode.ExtensionContext): void {
       }
       const configDoc = await vscode.workspace.openTextDocument(configPath);
       await vscode.window.showTextDocument(configDoc);
+    }),
+  );
+
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand("clang-format.createConfig", async () => {
+      const styles = [
+        { label: "LLVM", description: "LLVM coding standards" },
+        { label: "Google", description: "Google's C++ style guide" },
+        { label: "Chromium", description: "Chromium's style guide" },
+        { label: "Mozilla", description: "Mozilla's style guide" },
+        { label: "WebKit", description: "WebKit's style guide" },
+        { label: "Microsoft", description: "Microsoft's style guide" },
+        { label: "GNU", description: "GNU coding standards" },
+        {
+          label: "InheritParentConfig",
+          description: "Inherit from .clang-format in parent directory",
+        },
+      ];
+
+      const picked = await vscode.window.showQuickPick(styles, {
+        placeHolder: "Select a base style for .clang-format",
+      });
+      if (!picked) {
+        return;
+      }
+
+      let binPath: string;
+      try {
+        binPath = getBinPath(formatter.getExecutablePath());
+      } catch {
+        vscode.window.showErrorMessage(
+          "clang-format binary not found. Check the clang-format.executable setting.",
+        );
+        return;
+      }
+
+      const result = cp.spawnSync(
+        binPath,
+        [`-style=${picked.label.toLowerCase()}`, "-dump-config"],
+        { encoding: "utf8", timeout: 10000 },
+      );
+
+      if (result.status !== 0) {
+        vscode.window.showErrorMessage(
+          `clang-format failed: ${result.stderr || "unknown error"}`,
+        );
+        return;
+      }
+
+      const dir = vscode.window.activeTextEditor
+        ? path.dirname(vscode.window.activeTextEditor.document.fileName)
+        : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const defaultUri = vscode.Uri.file(
+        dir ? path.join(dir, ".clang-format") : ".clang-format",
+      );
+      const saveUri = await vscode.window.showSaveDialog({ defaultUri });
+      if (!saveUri) {
+        return;
+      }
+
+      await vscode.workspace.fs.writeFile(saveUri, Buffer.from(result.stdout));
+      const doc = await vscode.workspace.openTextDocument(saveUri);
+      await vscode.window.showTextDocument(doc);
     }),
   );
 

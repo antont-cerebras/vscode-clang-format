@@ -79,6 +79,11 @@
         "category": "Clang-Format"
       },
       {
+        "command": "clang-format.createConfig",
+        "title": "Create .clang-format File...",
+        "category": "Clang-Format"
+      },
+      {
         "command": "clang-format.runCommand",
         "title": "Run Command...",
         "category": "Clang-Format"

@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [2.1.0] - 2026-04-15
 ### Added
+- Command **Clang-Format: Create .clang-format File...** to generate a new `.clang-format` config file from a chosen base style (LLVM, Google, Chromium, Mozilla, WebKit, Microsoft, GNU, InheritParentConfig) via `clang-format -dump-config`
 - `${toolchainPointerFile}` placeholder for `clang-format.executable`: reads the file set in `clang-format.toolchainPointerFile` and substitutes its content into the executable path
 - Log clang-format version (or "not found" with searched paths) in the Output panel on extension startup
 - `clang-format.verboseLog` setting: when enabled, logs each edit as a colored diff (red/green) in the Output panel
