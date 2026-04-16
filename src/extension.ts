@@ -51,6 +51,22 @@ export const outputChannel = vscode.window.createOutputChannel(
 );
 let diagnosticCollection: vscode.DiagnosticCollection;
 
+function substituteVariables(str: string, workspaceFolder: string): string {
+  return str
+    .replace(/\${workspaceRoot}/g, workspaceFolder)
+    .replace(/\${workspaceFolder}/g, workspaceFolder)
+    .replace(/\${cwd}/g, process.cwd())
+    .replace(/\${env\.([^}]+)}/g, (_sub: string, envName: string) => {
+      if (!/^[a-z_]\w*$/i.test(envName)) {
+        outputChannel.appendLine(
+          `Warning: Invalid environment variable name: ${envName}`,
+        );
+        return "";
+      }
+      return process.env[envName] ?? "";
+    });
+}
+
 function getPlatformString() {
   switch (process.platform) {
     case "win32":
@@ -319,20 +335,10 @@ export class ClangDocumentFormattingEditProvider
     }
 
     // replace placeholders, if present
-    return execPath
-      .replace(/\${toolchainPointerFile}/g, toolchainPrefix)
-      .replace(/\${workspaceRoot}/g, workspaceFolder)
-      .replace(/\${workspaceFolder}/g, workspaceFolder)
-      .replace(/\${cwd}/g, process.cwd())
-      .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => {
-        if (!/^[a-z_]\w*$/i.test(envName)) {
-          outputChannel.appendLine(
-            `Warning: Invalid environment variable name: ${envName}`,
-          );
-          return "";
-        }
-        return process.env[envName] ?? "";
-      });
+    return substituteVariables(
+      execPath.replace(/\${toolchainPointerFile}/g, toolchainPrefix),
+      workspaceFolder,
+    );
   }
 
   private getLanguage(document: vscode.TextDocument): string {
@@ -661,20 +667,23 @@ export class ClangDocumentFormattingEditProvider
                   }
 
                   // Reconstruct new lines by splicing newText into the line context
-                  const prefix = document.lineAt(start.line).text.slice(
-                    0,
-                    start.character,
-                  );
-                  const suffix = document.lineAt(end.line).text.slice(
-                    end.character,
-                  );
+                  const prefix = document
+                    .lineAt(start.line)
+                    .text.slice(0, start.character);
+                  const suffix = document
+                    .lineAt(end.line)
+                    .text.slice(end.character);
                   const newLines = (prefix + edit.newText + suffix).split("\n");
 
                   const total = oldLines.length + newLines.length;
                   const truncated = total > MAX_DIFF_LINES;
                   const half = Math.floor(MAX_DIFF_LINES / 2);
-                  const oldSlice = truncated ? oldLines.slice(0, half) : oldLines;
-                  const newSlice = truncated ? newLines.slice(0, half) : newLines;
+                  const oldSlice = truncated
+                    ? oldLines.slice(0, half)
+                    : oldLines;
+                  const newSlice = truncated
+                    ? newLines.slice(0, half)
+                    : newLines;
 
                   const diffLines = [
                     ...oldSlice.map((l) => `- ${l}`),
@@ -790,28 +799,75 @@ export function activate(ctx: vscode.ExtensionContext): void {
 
   const availableLanguages = new Set<string>();
 
-  ctx.subscriptions.push(
-    vscode.commands.registerCommand(
-      "clang-format.openConfig",
-      async () => {
-        const doc = vscode.window.activeTextEditor?.document;
-        if (!doc) {
-          vscode.window.showInformationMessage("No active editor.");
-          return;
-        }
-        const startDir = path.dirname(doc.fileName);
-        const configPath = findClangFormatConfig(startDir);
-        if (!configPath) {
-          vscode.window.showInformationMessage(
-            `No .clang-format file found (searched from: ${startDir})`,
+  function runShellCommand(command: string): void {
+    const workspaceFolder =
+      vscode.workspace.workspaceFolders?.[0].uri.fsPath ?? process.cwd();
+    const resolvedCommand = substituteVariables(command, workspaceFolder);
+
+    outputChannel.show(true);
+    outputChannel.appendLine(`[${timestamp()}] Running: ${resolvedCommand}`);
+
+    const proc = cp.spawn(resolvedCommand, [], {
+      shell: true,
+      cwd: workspaceFolder,
+    });
+    proc.stdout.on("data", (data: Buffer) =>
+      outputChannel.append(data.toString()),
+    );
+    proc.stderr.on("data", (data: Buffer) =>
+      outputChannel.append(data.toString()),
+    );
+    proc.on("exit", (code) => {
+      outputChannel.appendLine(
+        `[${timestamp()}] Finished with exit code ${code ?? "unknown"}`,
+      );
+    });
+  }
+
+  for (const [id, settingKey] of [
+    ["clang-format.formatProject", "formatProjectCommand"],
+    ["clang-format.formatChanged", "formatChangedCommand"],
+  ] as const) {
+    ctx.subscriptions.push(
+      vscode.commands.registerCommand(id, async () => {
+        const config = vscode.workspace.getConfiguration("clang-format");
+        const cmd = config.get<string>(settingKey, "").trim();
+        if (!cmd) {
+          const action = await vscode.window.showInformationMessage(
+            `Set clang-format.${settingKey} in settings to use this command.`,
+            "Open Settings",
           );
+          if (action === "Open Settings") {
+            vscode.commands.executeCommand(
+              "workbench.action.openSettings",
+              `clang-format.${settingKey}`,
+            );
+          }
           return;
         }
-        const configDoc =
-          await vscode.workspace.openTextDocument(configPath);
-        await vscode.window.showTextDocument(configDoc);
-      },
-    ),
+        runShellCommand(cmd);
+      }),
+    );
+  }
+
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand("clang-format.openConfig", async () => {
+      const doc = vscode.window.activeTextEditor?.document;
+      if (!doc) {
+        vscode.window.showInformationMessage("No active editor.");
+        return;
+      }
+      const startDir = path.dirname(doc.fileName);
+      const configPath = findClangFormatConfig(startDir);
+      if (!configPath) {
+        vscode.window.showInformationMessage(
+          `No .clang-format file found (searched from: ${startDir})`,
+        );
+        return;
+      }
+      const configDoc = await vscode.workspace.openTextDocument(configPath);
+      await vscode.window.showTextDocument(configDoc);
+    }),
   );
 
   for (const mode of MODES) {

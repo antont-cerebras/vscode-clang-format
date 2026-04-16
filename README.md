@@ -99,6 +99,21 @@ Run **Clang-Format: Open .clang-format for Current File** from the command palet
 
 `.clang-format` and `_clang-format` files are automatically associated with the YAML language, so they open with proper syntax highlighting.
 
+### Format Project / Format Changed Files
+
+Set `clang-format.formatProjectCommand` and/or `clang-format.formatChangedCommand` to a shell command that formats your project:
+
+```json
+{
+    "clang-format.formatProjectCommand": "make clang-format",
+    "clang-format.formatChangedCommand": "make clang-format-changed"
+}
+```
+
+When set, **Clang-Format: Format Project** and **Clang-Format: Format Changed Files** become available in the command palette. The command is run from the first workspace folder and its output is streamed to the **Clang-Format** Output panel. The `${workspaceFolder}` placeholder is supported in the command string.
+
+Running either command without the corresponding setting configured shows an info message with a button to open Settings.
+
 ## Logging
 
 Set `clang-format.verboseLog` to `true` to log each individual edit as a colored diff in the **Clang-Format** Output panel:

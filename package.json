@@ -67,6 +67,16 @@
         "command": "clang-format.openConfig",
         "title": "Open .clang-format for Current File",
         "category": "Clang-Format"
+      },
+      {
+        "command": "clang-format.formatProject",
+        "title": "Format Project",
+        "category": "Clang-Format"
+      },
+      {
+        "command": "clang-format.formatChanged",
+        "title": "Format Changed Files",
+        "category": "Clang-Format"
       }
     ],
     "configuration": {

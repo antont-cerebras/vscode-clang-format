@@ -106,6 +106,14 @@ function main() {
       packageJson.contributes.configuration.properties[
         "clang-format.assumeFilename"
       ],
+    "clang-format.formatProjectCommand":
+      packageJson.contributes.configuration.properties[
+        "clang-format.formatProjectCommand"
+      ],
+    "clang-format.formatChangedCommand":
+      packageJson.contributes.configuration.properties[
+        "clang-format.formatChangedCommand"
+      ],
     "clang-format.verboseLog":
       packageJson.contributes.configuration.properties[
         "clang-format.verboseLog"
