@@ -94,6 +94,11 @@
         "category": "Clang-Format"
       },
       {
+        "command": "clang-format.removeIgnore",
+        "title": "Remove Formatting Ignore",
+        "category": "Clang-Format"
+      },
+      {
         "command": "clang-format.runCommand",
         "title": "Run Command...",
         "category": "Clang-Format"
@@ -533,7 +538,10 @@
         },
         "clang-format.ignoreFormattingCommentStyle": {
           "type": "string",
-          "enum": ["line", "block"],
+          "enum": [
+            "line",
+            "block"
+          ],
           "default": "line",
           "description": "Comment style for 'Ignore Formatting for Selection': 'line' uses // clang-format off, 'block' uses /* clang-format off */.",
           "scope": "resource"

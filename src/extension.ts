@@ -1098,6 +1098,68 @@ export function activate(ctx: vscode.ExtensionContext): void {
     ),
   );
 
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand(
+      "clang-format.removeIgnore",
+      async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          vscode.window.showInformationMessage("No active editor.");
+          return;
+        }
+
+        const doc = editor.document;
+        const cursorLine = editor.selection.active.line;
+        const offPattern =
+          /^\s*(?:\/\/|\/\*)\s*clang-format\s+off\s*(?:\*\/)?\s*$/;
+        const onPattern =
+          /^\s*(?:\/\/|\/\*)\s*clang-format\s+on\s*(?:\*\/)?\s*$/;
+
+        // Search upward for clang-format off
+        let offLine = -1;
+        for (let i = cursorLine; i >= 0; i--) {
+          if (offPattern.test(doc.lineAt(i).text)) {
+            offLine = i;
+            break;
+          }
+          // Hit a clang-format on before finding off — cursor is not in an ignored region
+          if (onPattern.test(doc.lineAt(i).text)) {
+            break;
+          }
+        }
+        if (offLine === -1) {
+          vscode.window.showInformationMessage(
+            "Cursor is not inside a clang-format off/on region.",
+          );
+          return;
+        }
+
+        // Search downward for the matching clang-format on
+        let onLine = -1;
+        for (let i = cursorLine + 1; i < doc.lineCount; i++) {
+          if (onPattern.test(doc.lineAt(i).text)) {
+            onLine = i;
+            break;
+          }
+          if (offPattern.test(doc.lineAt(i).text)) {
+            break;
+          }
+        }
+
+        await editor.edit((b) => {
+          if (onLine !== -1) {
+            b.delete(
+              new vscode.Range(onLine, 0, onLine + 1, 0),
+            );
+          }
+          b.delete(
+            new vscode.Range(offLine, 0, offLine + 1, 0),
+          );
+        });
+      },
+    ),
+  );
+
   for (const mode of MODES) {
     if (typeof mode.language === "string") {
       ctx.subscriptions.push(
