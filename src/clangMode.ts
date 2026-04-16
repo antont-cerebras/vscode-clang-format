@@ -21,10 +21,10 @@ function updateLanguages(): void {
     }
   }
   MODES = Object.freeze(
-    languages.map((language) => ({
-      language,
-      scheme: "file" as const,
-    })),
+    languages.flatMap((language) => [
+      { language, scheme: "file" as const },
+      { language, scheme: "untitled" as const },
+    ]),
   );
 }
 

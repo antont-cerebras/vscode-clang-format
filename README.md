@@ -13,7 +13,7 @@
 
 The formatting style can be configured with a `.clang-format` file in the current folder or any parent folder. See [ClangFormatStyleOptions](https://clang.llvm.org/docs/ClangFormatStyleOptions.html) for available options.
 
-Files can be formatted on demand by right-clicking in the document and selecting **Format Document**, or by using the keyboard shortcut (usually Ctrl+Shift+F on Windows, Ctrl+Shift+I on Linux, and Shift+Option+F on macOS).
+Files can be formatted on demand by right-clicking in the document and selecting **Format Document**, or by using the keyboard shortcut (usually Ctrl+Shift+F on Windows, Ctrl+Shift+I on Linux, and Shift+Option+F on macOS). This works for both saved files and unsaved buffers.
 
 To format only part of a file, select the text and choose **Format Selection** from the right-click menu, or use Ctrl+K Ctrl+F (Cmd+K Cmd+F on macOS).
 

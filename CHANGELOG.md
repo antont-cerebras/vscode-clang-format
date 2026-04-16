@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - `clang-format.commands` setting: user-defined list of named shell commands, accessible via **Clang-Format: Run Command...** (Quick Pick) and repeatable with **Clang-Format: Repeat Last Command**. Last command is persisted across sessions.
 - `${clang-format.executable}` placeholder: resolves to the binary configured in `clang-format.executable`. Supported in command strings and style settings.
 - `${file}` placeholder: resolves to the absolute path of the file in the active editor. Supported across all settings that accept paths or commands.
+- Formatting now works on unsaved (untitled) buffers, not just saved files
 
 ## [2.0.10] - 2026-04-15
 ### Changed
