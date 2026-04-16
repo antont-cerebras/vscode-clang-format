@@ -1162,9 +1162,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vscode/vsce@npm:^3.7.1":
-  version: 3.7.1
-  resolution: "@vscode/vsce@npm:3.7.1"
+"@vscode/vsce@npm:^3.9.0":
+  version: 3.9.0
+  resolution: "@vscode/vsce@npm:3.9.0"
   dependencies:
     "@azure/identity": "npm:^4.1.0"
     "@secretlint/node": "npm:^10.1.2"
@@ -1194,14 +1194,14 @@ __metadata:
     typed-rest-client: "npm:^1.8.4"
     url-join: "npm:^4.0.1"
     xml2js: "npm:^0.5.0"
-    yauzl: "npm:^2.3.1"
+    yauzl: "npm:^3.2.1"
     yazl: "npm:^2.2.2"
   dependenciesMeta:
     keytar:
       optional: true
   bin:
     vsce: vsce
-  checksum: 10c0/97a930ddef3c1827b1887fc0385b8cc98cee3d2683fadc2576df32dea0d0e3da10df2b666b2dcfee7cd8bace46929d92522b614204d22d830997e1f2bd93d3fd
+  checksum: 10c0/463a54bfbc60dbcd75117d94dedd076d0874fb7324e45291b8f67e73eb2c0be64c3d2808340b968c73b965986196efdb956738ec16541f5690e9fc182d91b8ff
   languageName: node
   linkType: hard
 
@@ -1745,7 +1745,7 @@ __metadata:
     "@types/vscode": "npm:~1.99.1"
     "@vscode/test-cli": "npm:^0.0.12"
     "@vscode/test-electron": "npm:^2.5.2"
-    "@vscode/vsce": "npm:^3.7.1"
+    "@vscode/vsce": "npm:^3.9.0"
     esbuild: "npm:^0.27.2"
     eslint: "npm:^9.39.2"
     eslint-config-prettier: "npm:^10.1.8"
@@ -2650,15 +2650,6 @@ __metadata:
   dependencies:
     reusify: "npm:^1.0.4"
   checksum: 10c0/ebc6e50ac7048daaeb8e64522a1ea7a26e92b3cee5cd1c7f2316cdca81ba543aa40a136b53891446ea5c3a67ec215fbaca87ad405f102dd97012f62916905630
-  languageName: node
-  linkType: hard
-
-"fd-slicer@npm:~1.1.0":
-  version: 1.1.0
-  resolution: "fd-slicer@npm:1.1.0"
-  dependencies:
-    pend: "npm:~1.2.0"
-  checksum: 10c0/304dd70270298e3ffe3bcc05e6f7ade2511acc278bc52d025f8918b48b6aa3b77f10361bddfadfe2a28163f7af7adbdce96f4d22c31b2f648ba2901f0c5fc20e
   languageName: node
   linkType: hard
 
@@ -6367,13 +6358,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yauzl@npm:^2.3.1":
-  version: 2.10.0
-  resolution: "yauzl@npm:2.10.0"
+"yauzl@npm:^3.2.1":
+  version: 3.3.0
+  resolution: "yauzl@npm:3.3.0"
   dependencies:
     buffer-crc32: "npm:~0.2.3"
-    fd-slicer: "npm:~1.1.0"
-  checksum: 10c0/f265002af7541b9ec3589a27f5fb8f11cf348b53cc15e2751272e3c062cd73f3e715bc72d43257de71bbaecae446c3f1b14af7559e8ab0261625375541816422
+    pend: "npm:~1.2.0"
+  checksum: 10c0/935e32054171104bdf8a4091180f61b5698d8b90ee64552bb643c2176f815d4215d0764e3f41e0d9a1e4525b37602bf145ec5fd39dd014f0be7290851ce3acce
   languageName: node
   linkType: hard
 
