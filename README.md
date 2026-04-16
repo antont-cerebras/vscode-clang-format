@@ -112,7 +112,7 @@ Run **Clang-Format: Preview Formatting** to format the current file without modi
 
 Select code and run **Clang-Format: Ignore Formatting for Selection** to wrap it with `// clang-format off` and `// clang-format on` comments, preventing clang-format from touching that region. Set `clang-format.ignoreFormattingCommentStyle` to `"block"` to use `/* clang-format off */` style instead.
 
-To undo this, place the cursor inside an ignored region and run **Clang-Format: Remove Formatting Ignore** — it deletes the enclosing `off`/`on` comment pair (both `//` and `/* */` styles are recognized).
+To undo this, place the cursor inside an ignored region and run **Clang-Format: Remove Formatting Ignore** — it deletes the enclosing `off`/`on` comment pair (both `//` and `/* */` styles are recognized). To strip all ignore comments from the file at once, use **Clang-Format: Remove All Formatting Ignores**.
 
 ### Format Project / Format Changed Files / Run Command...
 

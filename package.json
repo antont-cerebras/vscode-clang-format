@@ -99,6 +99,11 @@
         "category": "Clang-Format"
       },
       {
+        "command": "clang-format.removeAllIgnores",
+        "title": "Remove All Formatting Ignores",
+        "category": "Clang-Format"
+      },
+      {
         "command": "clang-format.runCommand",
         "title": "Run Command...",
         "category": "Clang-Format"

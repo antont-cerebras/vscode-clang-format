@@ -1098,6 +1098,11 @@ export function activate(ctx: vscode.ExtensionContext): void {
     ),
   );
 
+  const clangFormatOffPattern =
+    /^\s*(?:\/\/|\/\*)\s*clang-format\s+off\s*(?:\*\/)?\s*$/;
+  const clangFormatOnPattern =
+    /^\s*(?:\/\/|\/\*)\s*clang-format\s+on\s*(?:\*\/)?\s*$/;
+
   ctx.subscriptions.push(
     vscode.commands.registerCommand(
       "clang-format.removeIgnore",
@@ -1110,20 +1115,16 @@ export function activate(ctx: vscode.ExtensionContext): void {
 
         const doc = editor.document;
         const cursorLine = editor.selection.active.line;
-        const offPattern =
-          /^\s*(?:\/\/|\/\*)\s*clang-format\s+off\s*(?:\*\/)?\s*$/;
-        const onPattern =
-          /^\s*(?:\/\/|\/\*)\s*clang-format\s+on\s*(?:\*\/)?\s*$/;
 
         // Search upward for clang-format off
         let offLine = -1;
         for (let i = cursorLine; i >= 0; i--) {
-          if (offPattern.test(doc.lineAt(i).text)) {
+          if (clangFormatOffPattern.test(doc.lineAt(i).text)) {
             offLine = i;
             break;
           }
           // Hit a clang-format on before finding off — cursor is not in an ignored region
-          if (onPattern.test(doc.lineAt(i).text)) {
+          if (clangFormatOnPattern.test(doc.lineAt(i).text)) {
             break;
           }
         }
@@ -1137,11 +1138,11 @@ export function activate(ctx: vscode.ExtensionContext): void {
         // Search downward for the matching clang-format on
         let onLine = -1;
         for (let i = cursorLine + 1; i < doc.lineCount; i++) {
-          if (onPattern.test(doc.lineAt(i).text)) {
+          if (clangFormatOnPattern.test(doc.lineAt(i).text)) {
             onLine = i;
             break;
           }
-          if (offPattern.test(doc.lineAt(i).text)) {
+          if (clangFormatOffPattern.test(doc.lineAt(i).text)) {
             break;
           }
         }
@@ -1155,6 +1156,44 @@ export function activate(ctx: vscode.ExtensionContext): void {
           b.delete(
             new vscode.Range(offLine, 0, offLine + 1, 0),
           );
+        });
+      },
+    ),
+  );
+
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand(
+      "clang-format.removeAllIgnores",
+      async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          vscode.window.showInformationMessage("No active editor.");
+          return;
+        }
+
+        const doc = editor.document;
+        const linesToDelete: number[] = [];
+        for (let i = 0; i < doc.lineCount; i++) {
+          const text = doc.lineAt(i).text;
+          if (
+            clangFormatOffPattern.test(text) ||
+            clangFormatOnPattern.test(text)
+          ) {
+            linesToDelete.push(i);
+          }
+        }
+
+        if (linesToDelete.length === 0) {
+          vscode.window.showInformationMessage(
+            "No clang-format off/on comments found.",
+          );
+          return;
+        }
+
+        await editor.edit((b) => {
+          for (let i = linesToDelete.length - 1; i >= 0; i--) {
+            b.delete(new vscode.Range(linesToDelete[i], 0, linesToDelete[i] + 1, 0));
+          }
         });
       },
     ),
