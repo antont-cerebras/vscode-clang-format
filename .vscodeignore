@@ -30,6 +30,8 @@ webpack.config.js
 contributing.md
 CODE_OF_CONDUCT.md
 SECURITY.md
+**/TODO.md
+**/STYLEGUIDE.md
 **/*.gif
 **/*.jpg
 **/*.ico
@@ -42,3 +44,4 @@ npm-debug.log
 .devcontainer/**
 .yarn/**
 .claude/**
+.node_version
