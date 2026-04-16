@@ -77,6 +77,16 @@
         "command": "clang-format.formatChanged",
         "title": "Format Changed Files",
         "category": "Clang-Format"
+      },
+      {
+        "command": "clang-format.runCommand",
+        "title": "Run Command...",
+        "category": "Clang-Format"
+      },
+      {
+        "command": "clang-format.runLastCommand",
+        "title": "Repeat Last Command",
+        "category": "Clang-Format"
       }
     ],
     "configuration": {

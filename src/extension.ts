@@ -51,11 +51,19 @@ export const outputChannel = vscode.window.createOutputChannel(
 );
 let diagnosticCollection: vscode.DiagnosticCollection;
 
-function substituteVariables(str: string, workspaceFolder: string): string {
+function substituteVariables(
+  str: string,
+  workspaceFolder: string,
+  executablePath?: string,
+  filePath?: string,
+): string {
+  const filePathResolved = filePath ?? "";
   return str
+    .replace(/\${clang-format\.executable}/g, executablePath ?? "")
     .replace(/\${workspaceRoot}/g, workspaceFolder)
     .replace(/\${workspaceFolder}/g, workspaceFolder)
     .replace(/\${cwd}/g, process.cwd())
+    .replace(/\${file}/g, filePathResolved)
     .replace(/\${env\.([^}]+)}/g, (_sub: string, envName: string) => {
       if (!/^[a-z_]\w*$/i.test(envName)) {
         outputChannel.appendLine(
@@ -312,11 +320,12 @@ export class ClangDocumentFormattingEditProvider
     // Resolve ${toolchainPointerFile} if used
     let toolchainPrefix = "";
     if (execPath.includes("${toolchainPointerFile}")) {
-      const pointerFile = config
-        .get<string>("toolchainPointerFile", "")
-        ?.replace(/\${workspaceRoot}/g, workspaceFolder)
-        .replace(/\${workspaceFolder}/g, workspaceFolder)
-        .trim();
+      const pointerFile = substituteVariables(
+        config.get<string>("toolchainPointerFile", "") ?? "",
+        workspaceFolder,
+        undefined,
+        document?.fileName,
+      ).trim();
 
       if (!pointerFile) {
         const msg =
@@ -338,6 +347,8 @@ export class ClangDocumentFormattingEditProvider
     return substituteVariables(
       execPath.replace(/\${toolchainPointerFile}/g, toolchainPrefix),
       workspaceFolder,
+      undefined,
+      document?.fileName,
     );
   }
 
@@ -356,41 +367,27 @@ export class ClangDocumentFormattingEditProvider
     // Get language-specific style with document URI
     const languageStyleKey = `language.${language}.style`;
 
-    let ret = config.get<string>(languageStyleKey) ?? "";
+    const workspaceFolder = this.getWorkspaceFolder(document) ?? "";
+    const filePath = document.fileName;
 
-    ret = ret
-      .replace(/\${workspaceRoot}/g, this.getWorkspaceFolder(document) ?? "")
-      .replace(/\${workspaceFolder}/g, this.getWorkspaceFolder(document) ?? "")
-      .replace(/\${cwd}/g, process.cwd())
-      .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => {
-        if (!/^[a-z_]\w*$/i.test(envName)) {
-          outputChannel.appendLine(
-            `Warning: Invalid environment variable name: ${envName}`,
-          );
-          return "";
-        }
-        return process.env[envName] ?? "";
-      });
+    let ret = substituteVariables(
+      config.get<string>(languageStyleKey) ?? "",
+      workspaceFolder,
+      undefined,
+      filePath,
+    );
 
     if (ret.trim()) {
       return ret;
     }
 
     // Fallback to global style
-    ret = config.get<string>("style") ?? "";
-    ret = ret
-      .replace(/\${workspaceRoot}/g, this.getWorkspaceFolder(document) ?? "")
-      .replace(/\${workspaceFolder}/g, this.getWorkspaceFolder(document) ?? "")
-      .replace(/\${cwd}/g, process.cwd())
-      .replace(/\${env\.([^}]+)}/g, (sub: string, envName: string) => {
-        if (!/^[a-z_]\w*$/i.test(envName)) {
-          outputChannel.appendLine(
-            `Warning: Invalid environment variable name: ${envName}`,
-          );
-          return "";
-        }
-        return process.env[envName] ?? "";
-      });
+    ret = substituteVariables(
+      config.get<string>("style") ?? "",
+      workspaceFolder,
+      undefined,
+      filePath,
+    );
 
     const finalStyle = ret.trim() ? ret : this.defaultConfigure.style;
     return finalStyle;
@@ -799,10 +796,27 @@ export function activate(ctx: vscode.ExtensionContext): void {
 
   const availableLanguages = new Set<string>();
 
-  function runShellCommand(command: string): void {
+  function runShellCommand(name: string, command: string): void {
     const workspaceFolder =
       vscode.workspace.workspaceFolders?.[0].uri.fsPath ?? process.cwd();
-    const resolvedCommand = substituteVariables(command, workspaceFolder);
+
+    let executablePath = "";
+    try {
+      executablePath = getBinPath(formatter.getExecutablePath());
+    } catch {
+      // not found — leave empty, let the shell error naturally
+    }
+
+    const filePath = vscode.window.activeTextEditor?.document.fileName ?? "";
+
+    const resolvedCommand = substituteVariables(
+      command,
+      workspaceFolder,
+      executablePath,
+      filePath,
+    );
+
+    ctx.globalState.update("lastCommand", { name, command });
 
     outputChannel.show(true);
     outputChannel.appendLine(`[${timestamp()}] Running: ${resolvedCommand}`);
@@ -821,12 +835,28 @@ export function activate(ctx: vscode.ExtensionContext): void {
       outputChannel.appendLine(
         `[${timestamp()}] Finished with exit code ${code ?? "unknown"}`,
       );
+      if (code !== 0) {
+        vscode.window
+          .showErrorMessage(
+            `Clang-Format: "${name}" failed with exit code ${code ?? "unknown"}. See Output panel for details.`,
+            "Show Output",
+          )
+          .then((action) => {
+            if (action === "Show Output") {
+              outputChannel.show(true);
+            }
+          });
+      }
     });
   }
 
-  for (const [id, settingKey] of [
-    ["clang-format.formatProject", "formatProjectCommand"],
-    ["clang-format.formatChanged", "formatChangedCommand"],
+  for (const [id, settingKey, label] of [
+    ["clang-format.formatProject", "formatProjectCommand", "Format Project"],
+    [
+      "clang-format.formatChanged",
+      "formatChangedCommand",
+      "Format Changed Files",
+    ],
   ] as const) {
     ctx.subscriptions.push(
       vscode.commands.registerCommand(id, async () => {
@@ -845,10 +875,53 @@ export function activate(ctx: vscode.ExtensionContext): void {
           }
           return;
         }
-        runShellCommand(cmd);
+        runShellCommand(label, cmd);
       }),
     );
   }
+
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand("clang-format.runCommand", async () => {
+      const config = vscode.workspace.getConfiguration("clang-format");
+      const commands = config.get<{ name: string; command: string }[]>(
+        "commands",
+        [],
+      );
+      if (commands.length === 0) {
+        const action = await vscode.window.showInformationMessage(
+          "No commands defined. Add entries to clang-format.commands in settings.",
+          "Open Settings",
+        );
+        if (action === "Open Settings") {
+          vscode.commands.executeCommand(
+            "workbench.action.openSettings",
+            "clang-format.commands",
+          );
+        }
+        return;
+      }
+      const picked = await vscode.window.showQuickPick(
+        commands.map((c) => ({ label: c.name, command: c.command })),
+        { placeHolder: "Select a command to run" },
+      );
+      if (picked) {
+        runShellCommand(picked.label, picked.command);
+      }
+    }),
+  );
+
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand("clang-format.runLastCommand", () => {
+      const last = ctx.globalState.get<{ name: string; command: string }>(
+        "lastCommand",
+      );
+      if (!last) {
+        vscode.window.showInformationMessage("No command has been run yet.");
+        return;
+      }
+      runShellCommand(last.name, last.command);
+    }),
+  );
 
   ctx.subscriptions.push(
     vscode.commands.registerCommand("clang-format.openConfig", async () => {

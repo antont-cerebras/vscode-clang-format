@@ -11,7 +11,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 - Log which `.clang-format` config file is used on each format operation, or explicitly note when none is found
 - Command **Clang-Format: Open .clang-format for Current File** to jump to the config file that applies to the active editor
 - `.clang-format` and `_clang-format` files are now associated with the YAML language for proper syntax highlighting
-- `clang-format.formatProjectCommand` and `clang-format.formatChangedCommand` settings: shell commands invoked by the new **Clang-Format: Format Project** and **Clang-Format: Format Changed Files** commands. Support `${workspaceFolder}` placeholder. Output is streamed to the Clang-Format Output panel.
+- `clang-format.formatProjectCommand` and `clang-format.formatChangedCommand` settings: shell commands invoked by the new **Clang-Format: Format Project** and **Clang-Format: Format Changed Files** commands. Output is streamed to the Clang-Format Output panel.
+- `clang-format.commands` setting: user-defined list of named shell commands, accessible via **Clang-Format: Run Command...** (Quick Pick) and repeatable with **Clang-Format: Repeat Last Command**. Last command is persisted across sessions.
+- `${clang-format.executable}` placeholder: resolves to the binary configured in `clang-format.executable`. Supported in command strings and style settings.
+- `${file}` placeholder: resolves to the absolute path of the file in the active editor. Supported across all settings that accept paths or commands.
 
 ## [2.0.10] - 2026-04-15
 ### Changed

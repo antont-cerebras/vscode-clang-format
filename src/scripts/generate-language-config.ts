@@ -106,6 +106,8 @@ function main() {
       packageJson.contributes.configuration.properties[
         "clang-format.assumeFilename"
       ],
+    "clang-format.commands":
+      packageJson.contributes.configuration.properties["clang-format.commands"],
     "clang-format.formatProjectCommand":
       packageJson.contributes.configuration.properties[
         "clang-format.formatProjectCommand"

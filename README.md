@@ -59,22 +59,23 @@ This extension searches for `clang-format` on your `PATH`. To use a specific bin
 }
 ```
 
-The following placeholders are supported in `clang-format.executable`:
+### Placeholders
 
-- `${workspaceRoot}` — absolute path of the current VS Code workspace root.
-- `${workspaceFolder}` — absolute path of the current VS Code workspace. For files outside any workspace, expands to the first available workspace root.
+The following placeholders are supported across all settings that accept paths or commands (`clang-format.executable`, `clang-format.style`, `clang-format.language.<lang>.style`, `clang-format.formatProjectCommand`, `clang-format.formatChangedCommand`, `clang-format.commands`):
+
+- `${workspaceRoot}` / `${workspaceFolder}` — absolute path of the current VS Code workspace.
 - `${cwd}` — current working directory of VS Code.
-- `${env.VAR}` — value of the environment variable `VAR`, e.g. `${env.HOME}`.
-- `${toolchainPointerFile}` — contents of the file specified in `clang-format.toolchainPointerFile`. See [Toolchain pointer file](#toolchain-pointer-file) below.
+- `${env.VAR}` — value of environment variable `VAR`, e.g. `${env.HOME}`.
+- `${file}` — absolute path of the file in the active editor.
+- `${clang-format.executable}` — the clang-format binary path configured in `clang-format.executable`. Useful in command strings to avoid repeating the binary path.
+- `${toolchainPointerFile}` — contents of the file set in `clang-format.toolchainPointerFile` (only in `clang-format.executable`). See [Toolchain pointer file](#toolchain-pointer-file).
 
-Some examples:
+The `clang-format.assumeFilename` setting supports a separate set of file-path placeholders: `${file}`, `${fileNoExtension}`, `${fileBasename}`, `${fileBasenameNoExtension}`, and `${fileExtname}`, with the same meaning as [VS Code's predefined variables](https://code.visualstudio.com/docs/editor/variables-reference). For example, `${fileNoExtension}.cpp` will format `/home/src/foo.h` with `-assume-filename /home/src/foo.cpp`.
+
+Some examples for `clang-format.executable`:
 
 - `${workspaceRoot}/node_modules/.bin/clang-format` — use the version installed locally via `npm install clang-format`.
 - `${env.HOME}/tools/clang38/clang-format` — use a specific version under your home directory.
-
-The `clang-format.assumeFilename` setting also supports placeholders: `${file}`, `${fileNoExtension}`, `${fileBasename}`, `${fileBasenameNoExtension}`, and `${fileExtname}`, with the same meaning as [VS Code's predefined variables](https://code.visualstudio.com/docs/editor/variables-reference). For example, `${fileNoExtension}.cpp` will format `/home/src/foo.h` with `-assume-filename /home/src/foo.cpp`.
-
-The workspace and environment placeholders (`${workspaceRoot}`, `${workspaceFolder}`, `${cwd}`, `${env.VAR}`) are also supported in `clang-format.style` and `clang-format.language.<language>.style`.
 
 ### Toolchain pointer file
 
@@ -99,9 +100,9 @@ Run **Clang-Format: Open .clang-format for Current File** from the command palet
 
 `.clang-format` and `_clang-format` files are automatically associated with the YAML language, so they open with proper syntax highlighting.
 
-### Format Project / Format Changed Files
+### Format Project / Format Changed Files / Run Command...
 
-Set `clang-format.formatProjectCommand` and/or `clang-format.formatChangedCommand` to a shell command that formats your project:
+Set `clang-format.formatProjectCommand` and/or `clang-format.formatChangedCommand` to enable the dedicated **Clang-Format: Format Project** and **Clang-Format: Format Changed Files** commands:
 
 ```json
 {
@@ -110,9 +111,30 @@ Set `clang-format.formatProjectCommand` and/or `clang-format.formatChangedComman
 }
 ```
 
-When set, **Clang-Format: Format Project** and **Clang-Format: Format Changed Files** become available in the command palette. The command is run from the first workspace folder and its output is streamed to the **Clang-Format** Output panel. The `${workspaceFolder}` placeholder is supported in the command string.
+For additional project-specific commands, define them in `clang-format.commands` and run them via **Clang-Format: Run Command...**, which shows a Quick Pick:
 
-Running either command without the corresponding setting configured shows an info message with a button to open Settings.
+```json
+{
+    "clang-format.commands": [
+        {
+            "name": "Check formatting",
+            "command": "${clang-format.executable} --dry-run --Werror ${file}"
+        },
+        {
+            "name": "Preview formatting diff",
+            "command": "${clang-format.executable} ${file} > /tmp/$(basename ${file}) && code --diff ${file} /tmp/$(basename ${file})"
+        },
+        {
+            "name": "Dump clang-format config",
+            "command": "${clang-format.executable} --dump-config"
+        }
+    ]
+}
+```
+
+All commands run from the first workspace folder and stream output to the **Clang-Format** Output panel.
+
+**Clang-Format: Repeat Last Command** re-runs whichever command was executed most recently (across all three sources above), persisted across sessions.
 
 ## Logging
 
