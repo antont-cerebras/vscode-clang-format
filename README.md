@@ -2,41 +2,54 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/antont-cerebras/vscode-clang-format/blob/master/LICENSE)
 
-[Clang-Format](http://clang.llvm.org/docs/ClangFormat.html) is a tool to format C, C++, JavaScript, and many other languages. It can be configured with a `.clang-format` file in the working folder or any parent folder. See [ClangFormatStyleOptions](http://clang.llvm.org/docs/ClangFormatStyleOptions.html) for available options.
-
-This project is maintained by [Cerebras](https://cerebras.ai). It is a fork of [a5ehren/vscode-clang-format](https://github.com/a5ehren/vscode-clang-format), which in turn is a rewrite of the original [xaverh/vscode-clang-format](https://github.com/xaverh/vscode-clang-format) extension, updated with modern VSIX and TypeScript best practices.
+[`clang-format`](https://clang.llvm.org/docs/ClangFormat.html) is a CLI tool to format source code files for C, C++, JavaScript, and many other languages. This extension aims to provide a VS Code-based UI to access to `clang-format`'s functionality.
 
 ## Prerequisites
 
 - **Visual Studio Code 1.96** or later
 - The **`clang-format` binary** installed on your system — this extension does not install it. See [Installing Clang-Format](#installing-clang-format) for instructions, and [Specifying the location of clang-format](#specifying-the-location-of-clang-format) if it is not on your `PATH`.
 
-## Usage
+## Basic usage
 
-This extension invokes the `clang-format` binary to format source files directly within VS Code.
-
-The [clangd](https://github.com/clangd/vscode-clangd) LSP extension and this extension can be used together — clangd provides code navigation, completion, and diagnostics, while this extension handles formatting. This is useful because clangd uses its own bundled libFormat library and does not allow overriding the `clang-format` binary, whereas this extension lets you specify the exact binary for your project.
-
-To avoid conflicts when both extensions are active, designate this extension as the default formatter for the languages you care about in your `settings.json`:
-
-```json
-{
-    "[c]":   { "editor.defaultFormatter": "Cerebras.clang-format" },
-    "[cpp]": { "editor.defaultFormatter": "Cerebras.clang-format" }
-}
-```
+The formatting style can be configured with a `.clang-format` file in the current folder or any parent folder. See [ClangFormatStyleOptions](https://clang.llvm.org/docs/ClangFormatStyleOptions.html) for available options.
 
 Files can be formatted on demand by right-clicking in the document and selecting **Format Document**, or by using the keyboard shortcut (usually Ctrl+Shift+F on Windows, Ctrl+Shift+I on Linux, and Shift+Option+F on macOS).
 
-To automatically format on save, add the following to your `settings.json`:
+To format only part of a file, select the text and choose **Format Selection** from the right-click menu, or use Ctrl+K Ctrl+F (Cmd+K Cmd+F on macOS).
 
+To set this extension as the default formatter, add per-language settings to your `settings.json`:
 ```json
 {
-    "editor.formatOnSave": true
+    "[cpp]": {
+        "editor.defaultFormatter": "Cerebras.clang-format"
+    }
 }
 ```
 
-## Specifying the location of clang-format
+`editor.defaultFormatter` — designates this extension as the formatter for the language. Required when multiple extensions with formatting capabilities are active (e.g. alongside clangd).
+
+The [clangd](https://github.com/clangd/vscode-clangd) LSP extension and this extension can be used together — clangd provides code navigation, completion, and diagnostics, while this extension handles formatting. This is useful because clangd uses its own bundled [LibFormat](https://clang.llvm.org/docs/LibFormat.html) library and *does not* allow overriding the `clang-format` binary, whereas this extension lets you specify the exact binary for your project.
+
+## Configuring
+
+To enable automatic formatting, add per-language settings to your `settings.json`:
+
+```json
+{
+    "[cpp]": {
+        "editor.defaultFormatter": "Cerebras.clang-format",
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true,
+        "editor.formatOnType": true
+    }
+}
+```
+
+- `editor.formatOnSave` — format the file automatically on every save.
+- `editor.formatOnPaste` — format pasted code automatically.
+- `editor.formatOnType` — format the current line after pressing Enter.
+
+### Specifying the location of clang-format
 
 This extension searches for `clang-format` on your `PATH`. To use a specific binary, set `clang-format.executable` in your `settings.json`:
 
@@ -63,7 +76,7 @@ The `clang-format.assumeFilename` setting also supports placeholders: `${file}`,
 
 The workspace and environment placeholders (`${workspaceRoot}`, `${workspaceFolder}`, `${cwd}`, `${env.VAR}`) are also supported in `clang-format.style` and `clang-format.language.<language>.style`.
 
-## Toolchain pointer file
+### Toolchain pointer file
 
 In environments where the toolchain version is tracked via a tag file in the repository, the `${toolchainPointerFile}` placeholder lets you derive the clang-format path from that file automatically.
 
@@ -86,7 +99,7 @@ Run **Clang-Format: Open .clang-format for Current File** from the command palet
 
 `.clang-format` and `_clang-format` files are automatically associated with the YAML language, so they open with proper syntax highlighting.
 
-## Verbose logging
+## Logging
 
 Set `clang-format.verboseLog` to `true` to log each individual edit as a colored diff in the **Clang-Format** Output panel:
 
@@ -117,3 +130,8 @@ LLVM includes the `clang-format` binary. With the default install path, set:
     "clang-format.executable": "C:\\Program Files\\LLVM\\bin\\clang-format.exe"
 }
 ```
+
+## Credits
+
+This project is maintained by [Cerebras](https://cerebras.ai). It is a fork of [a5ehren/vscode-clang-format](https://github.com/a5ehren/vscode-clang-format), which in turn is a rewrite of the original [xaverh/vscode-clang-format](https://github.com/xaverh/vscode-clang-format) extension, updated with modern VSIX and TypeScript best practices.
+
