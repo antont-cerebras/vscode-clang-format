@@ -84,6 +84,11 @@
         "category": "Clang-Format"
       },
       {
+        "command": "clang-format.previewFormat",
+        "title": "Preview Formatting",
+        "category": "Clang-Format"
+      },
+      {
         "command": "clang-format.runCommand",
         "title": "Run Command...",
         "category": "Clang-Format"

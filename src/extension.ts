@@ -3,7 +3,8 @@ import * as cp from "child_process";
 import * as path from "path";
 import { MODES } from "./clangMode";
 import { ALIAS } from "./shared/languageConfig";
-import { statSync, readFileSync } from "fs";
+import { statSync, readFileSync, writeFileSync, mkdtempSync } from "fs";
+import * as os from "os";
 
 interface ClangFormatConfig {
   executable: string;
@@ -456,7 +457,7 @@ export class ClangDocumentFormattingEditProvider
     return undefined;
   }
 
-  private getFormatArgs(
+  public getFormatArgs(
     document: vscode.TextDocument,
     range: vscode.Range | undefined,
   ): string[] {
@@ -500,7 +501,6 @@ export class ClangDocumentFormattingEditProvider
     }
 
     const baseArgs = [
-      "-output-replacements-xml",
       `-style=${style}`,
       `-fallback-style=${fallbackStyle}`,
       `-assume-filename=${assumedFilename}`,
@@ -572,7 +572,10 @@ export class ClangDocumentFormattingEditProvider
       try {
         formatCommandBinPath = getBinPath(this.getExecutablePath(document));
         const codeContent = document.getText();
-        const formatArgs = this.getFormatArgs(document, range);
+        const formatArgs = [
+          "-output-replacements-xml",
+          ...this.getFormatArgs(document, range),
+        ];
         if (!formatArgs) {
           cleanup();
           throw new Error("Failed to get format arguments");
@@ -1004,6 +1007,59 @@ export function activate(ctx: vscode.ExtensionContext): void {
       await vscode.workspace.fs.writeFile(saveUri, Buffer.from(result.stdout));
       const doc = await vscode.workspace.openTextDocument(saveUri);
       await vscode.window.showTextDocument(doc);
+    }),
+  );
+
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand("clang-format.previewFormat", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage("No active editor.");
+        return;
+      }
+      const document = editor.document;
+
+      let binPath: string;
+      try {
+        binPath = getBinPath(formatter.getExecutablePath(document));
+      } catch {
+        vscode.window.showErrorMessage(
+          "clang-format binary not found. Check the clang-format.executable setting.",
+        );
+        return;
+      }
+
+      const formatArgs = formatter.getFormatArgs(document, undefined);
+      const workingDir = document.isUntitled
+        ? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+        : path.dirname(document.fileName);
+
+      const result = cp.spawnSync(binPath, formatArgs, {
+        input: document.getText(),
+        encoding: "utf8",
+        timeout: 10000,
+        cwd: workingDir,
+      });
+
+      if (result.status !== 0) {
+        vscode.window.showErrorMessage(
+          `clang-format failed: ${result.stderr || "unknown error"}`,
+        );
+        return;
+      }
+
+      const tmpDir = mkdtempSync(path.join(os.tmpdir(), "clang-format-"));
+      const tmpFile = path.join(tmpDir, path.basename(document.fileName));
+      writeFileSync(tmpFile, result.stdout);
+      const tmpUri = vscode.Uri.file(tmpFile);
+
+      const title = `${path.basename(document.fileName)} (formatted)`;
+      await vscode.commands.executeCommand(
+        "vscode.diff",
+        document.uri,
+        tmpUri,
+        title,
+      );
     }),
   );
 

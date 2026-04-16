@@ -104,6 +104,10 @@ Run **Clang-Format: Open .clang-format for Current File** from the command palet
 
 Run **Clang-Format: Create .clang-format File...** to generate a new `.clang-format` config. A style picker lets you choose from LLVM, Google, Chromium, Mozilla, WebKit, Microsoft, GNU, or InheritParentConfig. The command runs `clang-format -style=<style> -dump-config` and shows a save dialog with `.clang-format` pre-filled in the current file's directory.
 
+### Preview Formatting
+
+Run **Clang-Format: Preview Formatting** to format the current file without modifying it and open a diff view showing the changes.
+
 ### Format Project / Format Changed Files / Run Command...
 
 Set `clang-format.formatProjectCommand` and/or `clang-format.formatChangedCommand` to enable the dedicated **Clang-Format: Format Project** and **Clang-Format: Format Changed Files** commands:
@@ -123,10 +127,6 @@ For additional project-specific commands, define them in `clang-format.commands`
         {
             "name": "Check formatting",
             "command": "${clang-format.executable} --dry-run --Werror ${file}"
-        },
-        {
-            "name": "Preview formatting diff",
-            "command": "${clang-format.executable} ${file} > /tmp/$(basename ${file}) && code --diff ${file} /tmp/$(basename ${file})"
         },
         {
             "name": "Dump clang-format config",
