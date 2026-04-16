@@ -89,6 +89,11 @@
         "category": "Clang-Format"
       },
       {
+        "command": "clang-format.ignoreSelection",
+        "title": "Ignore Formatting for Selection",
+        "category": "Clang-Format"
+      },
+      {
         "command": "clang-format.runCommand",
         "title": "Run Command...",
         "category": "Clang-Format"
@@ -524,6 +529,13 @@
           "type": "string",
           "default": "",
           "description": "Shell command to format only changed files (e.g. 'make clang-format-changed'). Supports ${workspaceFolder}. When set, enables the 'Clang-Format: Format Changed Files' command.",
+          "scope": "resource"
+        },
+        "clang-format.ignoreFormattingCommentStyle": {
+          "type": "string",
+          "enum": ["line", "block"],
+          "default": "line",
+          "description": "Comment style for 'Ignore Formatting for Selection': 'line' uses // clang-format off, 'block' uses /* clang-format off */.",
           "scope": "resource"
         },
         "clang-format.verboseLog": {

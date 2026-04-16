@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [2.1.0] - 2026-04-15
 ### Added
+- Command **Clang-Format: Ignore Formatting for Selection** to wrap the selected code with `// clang-format off` / `// clang-format on` comments. Set `clang-format.ignoreFormattingCommentStyle` to `"block"` to use `/* */` style instead.
 - Command **Clang-Format: Preview Formatting** to format the current file out of place and open a diff view showing the changes
 - Command **Clang-Format: Create .clang-format File...** to generate a new `.clang-format` config file from a chosen base style (LLVM, Google, Chromium, Mozilla, WebKit, Microsoft, GNU, InheritParentConfig) via `clang-format -dump-config`
 - `${toolchainPointerFile}` placeholder for `clang-format.executable`: reads the file set in `clang-format.toolchainPointerFile` and substitutes its content into the executable path

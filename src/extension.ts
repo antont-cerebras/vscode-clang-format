@@ -1063,6 +1063,41 @@ export function activate(ctx: vscode.ExtensionContext): void {
     }),
   );
 
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand(
+      "clang-format.ignoreSelection",
+      async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+          vscode.window.showInformationMessage("No active editor.");
+          return;
+        }
+        const selection = editor.selection;
+        if (selection.isEmpty) {
+          vscode.window.showInformationMessage("Select code to ignore.");
+          return;
+        }
+
+        const startLine = selection.start.line;
+        const endLine = selection.end.line;
+        const indent =
+          /^\s*/.exec(editor.document.lineAt(startLine).text)?.[0] ?? "";
+        const style = vscode.workspace
+          .getConfiguration("clang-format", editor.document.uri)
+          .get<string>("ignoreFormattingCommentStyle", "line");
+        const [off, on] =
+          style === "block"
+            ? ["/* clang-format off */", "/* clang-format on */"]
+            : ["// clang-format off", "// clang-format on"];
+
+        await editor.edit((b) => {
+          b.insert(new vscode.Position(endLine + 1, 0), `${indent}${on}\n`);
+          b.insert(new vscode.Position(startLine, 0), `${indent}${off}\n`);
+        });
+      },
+    ),
+  );
+
   for (const mode of MODES) {
     if (typeof mode.language === "string") {
       ctx.subscriptions.push(

@@ -108,6 +108,10 @@ Run **Clang-Format: Create .clang-format File...** to generate a new `.clang-for
 
 Run **Clang-Format: Preview Formatting** to format the current file without modifying it and open a diff view showing the changes.
 
+### Ignore Formatting for Selection
+
+Select code and run **Clang-Format: Ignore Formatting for Selection** to wrap it with `// clang-format off` and `// clang-format on` comments, preventing clang-format from touching that region. Set `clang-format.ignoreFormattingCommentStyle` to `"block"` to use `/* clang-format off */` style instead.
+
 ### Format Project / Format Changed Files / Run Command...
 
 Set `clang-format.formatProjectCommand` and/or `clang-format.formatChangedCommand` to enable the dedicated **Clang-Format: Format Project** and **Clang-Format: Format Changed Files** commands:
