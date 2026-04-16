@@ -73,53 +73,27 @@ function main() {
   // Generate activation events
   packageJson.activationEvents = generateActivationEvents();
 
-  // Merge with existing configuration properties
+  // Split existing properties into non-language (preserved as-is) and language
+  // (regenerated from shared/languageConfig.ts). This way new non-language
+  // settings never need to be registered here.
+  const existing = packageJson.contributes.configuration.properties;
+  const beforeLang: Record<string, unknown> = {};
+  const afterLang: Record<string, unknown> = {};
+  let seenLanguageKey = false;
+  for (const [key, value] of Object.entries(existing)) {
+    if (key.startsWith("clang-format.language.")) {
+      seenLanguageKey = true;
+    } else if (seenLanguageKey) {
+      afterLang[key] = value;
+    } else {
+      beforeLang[key] = value;
+    }
+  }
+
   packageJson.contributes.configuration.properties = {
-    "clang-format.toolchainPointerFile":
-      packageJson.contributes.configuration.properties[
-        "clang-format.toolchainPointerFile"
-      ],
-    "clang-format.executable":
-      packageJson.contributes.configuration.properties[
-        "clang-format.executable"
-      ],
-    "clang-format.executable.windows":
-      packageJson.contributes.configuration.properties[
-        "clang-format.executable.windows"
-      ],
-    "clang-format.executable.linux":
-      packageJson.contributes.configuration.properties[
-        "clang-format.executable.linux"
-      ],
-    "clang-format.executable.osx":
-      packageJson.contributes.configuration.properties[
-        "clang-format.executable.osx"
-      ],
-    "clang-format.style":
-      packageJson.contributes.configuration.properties["clang-format.style"],
-    "clang-format.fallbackStyle":
-      packageJson.contributes.configuration.properties[
-        "clang-format.fallbackStyle"
-      ],
+    ...beforeLang,
     ...languageConfigs,
-    "clang-format.assumeFilename":
-      packageJson.contributes.configuration.properties[
-        "clang-format.assumeFilename"
-      ],
-    "clang-format.commands":
-      packageJson.contributes.configuration.properties["clang-format.commands"],
-    "clang-format.formatProjectCommand":
-      packageJson.contributes.configuration.properties[
-        "clang-format.formatProjectCommand"
-      ],
-    "clang-format.formatChangedCommand":
-      packageJson.contributes.configuration.properties[
-        "clang-format.formatChangedCommand"
-      ],
-    "clang-format.verboseLog":
-      packageJson.contributes.configuration.properties[
-        "clang-format.verboseLog"
-      ],
+    ...afterLang,
   };
 
   // Write back to package.json with consistent formatting
