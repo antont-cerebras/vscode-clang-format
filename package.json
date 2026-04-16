@@ -104,6 +104,11 @@
         "category": "Clang-Format"
       },
       {
+        "command": "clang-format.ignoreFile",
+        "title": "Ignore Formatting for Current File",
+        "category": "Clang-Format"
+      },
+      {
         "command": "clang-format.runCommand",
         "title": "Run Command...",
         "category": "Clang-Format"
@@ -539,6 +544,13 @@
           "type": "string",
           "default": "",
           "description": "Shell command to format only changed files (e.g. 'make clang-format-changed'). Supports ${workspaceFolder}. When set, enables the 'Clang-Format: Format Changed Files' command.",
+          "scope": "resource"
+        },
+        "clang-format.ignoreFileMethod": {
+          "type": "string",
+          "enum": ["comment-on-top", "clang-format-ignore"],
+          "default": "comment-on-top",
+          "description": "How 'Ignore Formatting for Current File' works: 'comment-on-top' inserts a clang-format off comment at the top of the file, 'clang-format-ignore' adds the file to .clang-format-ignore.",
           "scope": "resource"
         },
         "clang-format.ignoreFormattingCommentStyle": {

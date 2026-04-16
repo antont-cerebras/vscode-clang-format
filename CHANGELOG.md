@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ## [2.1.0] - 2026-04-15
 ### Added
+- Command **Clang-Format: Ignore Formatting for Current File** to exclude the current file from formatting, either by inserting a `clang-format off` comment at the top (default) or by adding it to `.clang-format-ignore`. Controlled by `clang-format.ignoreFileMethod`.
 - Command **Clang-Format: Remove All Formatting Ignores** to remove every `clang-format off`/`on` comment from the current file
 - Command **Clang-Format: Remove Formatting Ignore** to remove the `clang-format off`/`on` pair surrounding the cursor
 - Command **Clang-Format: Ignore Formatting for Selection** to wrap the selected code with `// clang-format off` / `// clang-format on` comments. Set `clang-format.ignoreFormattingCommentStyle` to `"block"` to use `/* */` style instead.

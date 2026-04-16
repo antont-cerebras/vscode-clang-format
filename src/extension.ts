@@ -23,10 +23,10 @@ function timestamp(): string {
   return new Date().toTimeString().slice(0, 8); // HH:MM:SS
 }
 
-function findClangFormatConfig(startDir: string): string | null {
+function findFileUpward(startDir: string, names: string[]): string | null {
   let dir = startDir;
   while (true) {
-    for (const name of [".clang-format", "_clang-format"]) {
+    for (const name of names) {
       try {
         const candidate = path.join(dir, name);
         if (statSync(candidate).isFile()) {
@@ -42,6 +42,10 @@ function findClangFormatConfig(startDir: string): string | null {
     }
     dir = parent;
   }
+}
+
+function findClangFormatConfig(startDir: string): string | null {
+  return findFileUpward(startDir, [".clang-format", "_clang-format"]);
 }
 
 // Cache binary paths for performance
@@ -1262,6 +1266,89 @@ export function activate(ctx: vscode.ExtensionContext): void {
         });
       },
     ),
+  );
+
+  ctx.subscriptions.push(
+    vscode.commands.registerCommand("clang-format.ignoreFile", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage("No active editor.");
+        return;
+      }
+      const doc = editor.document;
+      const method = vscode.workspace
+        .getConfiguration("clang-format", doc.uri)
+        .get<string>("ignoreFileMethod", "comment-on-top");
+
+      if (method === "clang-format-ignore") {
+        if (doc.isUntitled) {
+          vscode.window.showErrorMessage(
+            "Save the file first to add it to .clang-format-ignore.",
+          );
+          return;
+        }
+
+        const fileDir = path.dirname(doc.fileName);
+        let ignorePath = findFileUpward(fileDir, [".clang-format-ignore"]);
+        if (!ignorePath) {
+          const wsFolder = vscode.workspace.getWorkspaceFolder(doc.uri);
+          ignorePath = path.join(
+            wsFolder?.uri.fsPath ?? fileDir,
+            ".clang-format-ignore",
+          );
+        }
+
+        const ignoreDir = path.dirname(ignorePath);
+        const relativePath = path.relative(ignoreDir, doc.fileName);
+        const ignoreUri = vscode.Uri.file(ignorePath);
+
+        let existing = "";
+        try {
+          const bytes = await vscode.workspace.fs.readFile(ignoreUri);
+          existing = Buffer.from(bytes).toString("utf8");
+        } catch {
+          // file doesn't exist yet
+        }
+
+        if (existing.split("\n").some((l) => l.trim() === relativePath)) {
+          vscode.window.showInformationMessage(
+            `${relativePath} is already in .clang-format-ignore.`,
+          );
+          return;
+        }
+
+        const newContent =
+          existing.endsWith("\n") || existing === ""
+            ? existing + relativePath + "\n"
+            : existing + "\n" + relativePath + "\n";
+        await vscode.workspace.fs.writeFile(ignoreUri, Buffer.from(newContent));
+        vscode.window.showInformationMessage(
+          `Added ${relativePath} to ${ignorePath}.`,
+        );
+      } else {
+        const style = vscode.workspace
+          .getConfiguration("clang-format", doc.uri)
+          .get<string>("ignoreFormattingCommentStyle", "line");
+        const comment =
+          style === "block"
+            ? "/* clang-format off */"
+            : "// clang-format off";
+
+        if (
+          doc.lineCount > 0 &&
+          clangFormatOffPattern.test(doc.lineAt(0).text)
+        ) {
+          vscode.window.showInformationMessage(
+            "File already has clang-format off at the top.",
+          );
+          return;
+        }
+
+        await editor.edit((b) => {
+          b.insert(new vscode.Position(0, 0), `${comment}\n`);
+        });
+      }
+    }),
   );
 
   for (const mode of MODES) {

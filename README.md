@@ -114,6 +114,10 @@ Select code and run **Clang-Format: Ignore Formatting for Selection** to wrap it
 
 To undo this, place the cursor inside an ignored region and run **Clang-Format: Remove Formatting Ignore** — it deletes the enclosing `off`/`on` comment pair (both `//` and `/* */` styles are recognized). To strip all ignore comments from the file at once, use **Clang-Format: Remove All Formatting Ignores**.
 
+### Ignore Formatting for Current File
+
+Run **Clang-Format: Ignore Formatting for Current File** to exclude the entire file from formatting. By default, it inserts a `// clang-format off` comment at the top of the file. Set `clang-format.ignoreFileMethod` to `"clang-format-ignore"` to instead add the file to `.clang-format-ignore` (the extension searches upward from the file's directory, matching clang-format's own lookup; if no `.clang-format-ignore` exists, it creates one in the workspace root).
+
 ### Format Project / Format Changed Files / Run Command...
 
 Set `clang-format.formatProjectCommand` and/or `clang-format.formatChangedCommand` to enable the dedicated **Clang-Format: Format Project** and **Clang-Format: Format Changed Files** commands:
