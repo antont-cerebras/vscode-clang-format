@@ -1078,21 +1078,91 @@ export function activate(ctx: vscode.ExtensionContext): void {
           return;
         }
 
+        const doc = editor.document;
         const startLine = selection.start.line;
         const endLine = selection.end.line;
-        const indent =
-          /^\s*/.exec(editor.document.lineAt(startLine).text)?.[0] ?? "";
-        const style = vscode.workspace
-          .getConfiguration("clang-format", editor.document.uri)
-          .get<string>("ignoreFormattingCommentStyle", "line");
-        const [off, on] =
-          style === "block"
-            ? ["/* clang-format off */", "/* clang-format on */"]
-            : ["// clang-format off", "// clang-format on"];
 
+        const getComments = (anchorLine: number) => {
+          const indent = /^\s*/.exec(doc.lineAt(anchorLine).text)?.[0] ?? "";
+          const style = vscode.workspace
+            .getConfiguration("clang-format", doc.uri)
+            .get<string>("ignoreFormattingCommentStyle", "line");
+          return style === "block"
+            ? [
+                `${indent}/* clang-format off */`,
+                `${indent}/* clang-format on */`,
+              ]
+            : [`${indent}// clang-format off`, `${indent}// clang-format on`];
+        };
+
+        // Search upward from a line for an unclosed off
+        const findOffAbove = (from: number): number => {
+          for (let i = from; i >= 0; i--) {
+            if (clangFormatOffPattern.test(doc.lineAt(i).text)) return i;
+            if (clangFormatOnPattern.test(doc.lineAt(i).text)) break;
+          }
+          return -1;
+        };
+
+        // Search downward from a line for the next on
+        const findOnBelow = (from: number): number => {
+          for (let i = from; i < doc.lineCount; i++) {
+            if (clangFormatOnPattern.test(doc.lineAt(i).text)) return i;
+            if (clangFormatOffPattern.test(doc.lineAt(i).text)) break;
+          }
+          return -1;
+        };
+
+        // Check overlap: off above selection, or off inside selection
+        let existingOffLine = findOffAbove(startLine - 1);
+        if (existingOffLine === -1) {
+          for (let i = startLine; i <= endLine; i++) {
+            if (clangFormatOffPattern.test(doc.lineAt(i).text)) {
+              existingOffLine = i;
+              break;
+            }
+          }
+        }
+
+        const existingOnLine =
+          existingOffLine !== -1 ? findOnBelow(existingOffLine + 1) : -1;
+
+        if (existingOffLine !== -1) {
+          const action = await vscode.window.showWarningMessage(
+            "Selection overlaps an existing clang-format off/on region.",
+            "Extend Existing Region",
+            "Cancel",
+          );
+          if (action !== "Extend Existing Region") {
+            return;
+          }
+
+          const newOffLine = Math.min(startLine, existingOffLine);
+          const [off, on] = getComments(newOffLine);
+
+          await editor.edit((b) => {
+            if (existingOnLine !== -1) {
+              b.delete(
+                new vscode.Range(existingOnLine, 0, existingOnLine + 1, 0),
+              );
+            }
+            b.delete(
+              new vscode.Range(existingOffLine, 0, existingOffLine + 1, 0),
+            );
+            const newOnLine = Math.max(
+              endLine,
+              existingOnLine !== -1 ? existingOnLine - 1 : endLine,
+            );
+            b.insert(new vscode.Position(newOnLine + 1, 0), `${on}\n`);
+            b.insert(new vscode.Position(newOffLine, 0), `${off}\n`);
+          });
+          return;
+        }
+
+        const [off, on] = getComments(startLine);
         await editor.edit((b) => {
-          b.insert(new vscode.Position(endLine + 1, 0), `${indent}${on}\n`);
-          b.insert(new vscode.Position(startLine, 0), `${indent}${off}\n`);
+          b.insert(new vscode.Position(endLine + 1, 0), `${on}\n`);
+          b.insert(new vscode.Position(startLine, 0), `${off}\n`);
         });
       },
     ),
@@ -1104,61 +1174,54 @@ export function activate(ctx: vscode.ExtensionContext): void {
     /^\s*(?:\/\/|\/\*)\s*clang-format\s+on\s*(?:\*\/)?\s*$/;
 
   ctx.subscriptions.push(
-    vscode.commands.registerCommand(
-      "clang-format.removeIgnore",
-      async () => {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-          vscode.window.showInformationMessage("No active editor.");
-          return;
-        }
+    vscode.commands.registerCommand("clang-format.removeIgnore", async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showInformationMessage("No active editor.");
+        return;
+      }
 
-        const doc = editor.document;
-        const cursorLine = editor.selection.active.line;
+      const doc = editor.document;
+      const cursorLine = editor.selection.active.line;
 
-        // Search upward for clang-format off
-        let offLine = -1;
-        for (let i = cursorLine; i >= 0; i--) {
-          if (clangFormatOffPattern.test(doc.lineAt(i).text)) {
-            offLine = i;
-            break;
-          }
-          // Hit a clang-format on before finding off — cursor is not in an ignored region
-          if (clangFormatOnPattern.test(doc.lineAt(i).text)) {
-            break;
-          }
+      // Search upward for clang-format off
+      let offLine = -1;
+      for (let i = cursorLine; i >= 0; i--) {
+        if (clangFormatOffPattern.test(doc.lineAt(i).text)) {
+          offLine = i;
+          break;
         }
-        if (offLine === -1) {
-          vscode.window.showInformationMessage(
-            "Cursor is not inside a clang-format off/on region.",
-          );
-          return;
+        // Hit a clang-format on before finding off — cursor is not in an ignored region
+        if (clangFormatOnPattern.test(doc.lineAt(i).text)) {
+          break;
         }
+      }
+      if (offLine === -1) {
+        vscode.window.showInformationMessage(
+          "Cursor is not inside a clang-format off/on region.",
+        );
+        return;
+      }
 
-        // Search downward for the matching clang-format on
-        let onLine = -1;
-        for (let i = cursorLine + 1; i < doc.lineCount; i++) {
-          if (clangFormatOnPattern.test(doc.lineAt(i).text)) {
-            onLine = i;
-            break;
-          }
-          if (clangFormatOffPattern.test(doc.lineAt(i).text)) {
-            break;
-          }
+      // Search downward for the matching clang-format on
+      let onLine = -1;
+      for (let i = cursorLine + 1; i < doc.lineCount; i++) {
+        if (clangFormatOnPattern.test(doc.lineAt(i).text)) {
+          onLine = i;
+          break;
         }
+        if (clangFormatOffPattern.test(doc.lineAt(i).text)) {
+          break;
+        }
+      }
 
-        await editor.edit((b) => {
-          if (onLine !== -1) {
-            b.delete(
-              new vscode.Range(onLine, 0, onLine + 1, 0),
-            );
-          }
-          b.delete(
-            new vscode.Range(offLine, 0, offLine + 1, 0),
-          );
-        });
-      },
-    ),
+      await editor.edit((b) => {
+        if (onLine !== -1) {
+          b.delete(new vscode.Range(onLine, 0, onLine + 1, 0));
+        }
+        b.delete(new vscode.Range(offLine, 0, offLine + 1, 0));
+      });
+    }),
   );
 
   ctx.subscriptions.push(
@@ -1192,7 +1255,9 @@ export function activate(ctx: vscode.ExtensionContext): void {
 
         await editor.edit((b) => {
           for (let i = linesToDelete.length - 1; i >= 0; i--) {
-            b.delete(new vscode.Range(linesToDelete[i], 0, linesToDelete[i] + 1, 0));
+            b.delete(
+              new vscode.Range(linesToDelete[i], 0, linesToDelete[i] + 1, 0),
+            );
           }
         });
       },
