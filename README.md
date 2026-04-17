@@ -49,6 +49,14 @@ To enable automatic formatting, add per-language settings to your `settings.json
 - `editor.formatOnPaste` — format pasted code automatically.
 - `editor.formatOnType` — format the current line after pressing Enter.
 
+### Style and fallback style
+
+`clang-format.style` controls the formatting style (`-style` flag). Defaults to `"file"`, which tells clang-format to use a `.clang-format` file found in the directory tree. Other values: `LLVM`, `Google`, `Chromium`, `Mozilla`, `WebKit`, `Microsoft`, `GNU`, or a JSON string like `{BasedOnStyle: Google, IndentWidth: 4}`.
+
+`clang-format.fallbackStyle` is used when `-style=file` is active but no `.clang-format` file is found (`-fallback-style` flag). Defaults to `"LLVM"`.
+
+Both can be overridden per language, e.g. `clang-format.language.cpp.style` and `clang-format.language.cpp.fallbackStyle`.
+
 ### Specifying the location of clang-format
 
 This extension searches for `clang-format` on your `PATH`. To use a specific binary, set `clang-format.executable` in your `settings.json`:
